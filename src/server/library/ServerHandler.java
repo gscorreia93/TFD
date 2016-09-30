@@ -10,7 +10,12 @@ import java.util.List;
 
 import exceptions.ServerNotFoundException;
 
-public class ServerHandler implements RemoteMethods {
+public class ServerHandler extends  UnicastRemoteObject {
+
+	protected ServerHandler() throws RemoteException {
+		super();
+		// TODO Auto-generated constructor stub
+	}
 
 	public void openConnection() {
 		startServer(RAFTServers.INSTANCE.getServers());
@@ -25,9 +30,9 @@ public class ServerHandler implements RemoteMethods {
 		for( Server server : servers){
 			System.out.println(server.getPort());
 			try {
-				RemoteMethods stub = (RemoteMethods) UnicastRemoteObject.exportObject(this, server.getPort());
+				//RemoteMethods stub = (RemoteMethods) UnicastRemoteObject.exportObject(this,server.getPort());
 				Registry registry = LocateRegistry.createRegistry(server.getPort());
-				registry.bind("ServerHandler", stub);
+				registry.bind("ServerHandler", this);
 
 				System.out.println(server.getAddress()+"["+server.getPort()+"] started!");
 
@@ -39,25 +44,25 @@ public class ServerHandler implements RemoteMethods {
 		}
 	}
 
-	@Override
-	public boolean requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-		return candidateID == 1;
-	}
-
-	@Override
-	public boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, String[] entries, int leaderCommit) throws RemoteException {
-		// First resets the state to follower
-		ElectionHandler.INSTANCE.resetState();
-		return false;
-	}
-
-	@Override
-	public String connect2Server() throws RemoteException {
-		return null;
-	}
-
-	@Override
-	public String executeCommand(String clientID, String command) throws RemoteException {
-		return clientID + ": " + command;
-	}
+//	@Override
+//	public boolean requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
+//		return candidateID == 1;
+//	}
+//
+//	@Override
+//	public boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, String[] entries, int leaderCommit) throws RemoteException {
+//		// First resets the state to follower
+//		ElectionHandler.INSTANCE.resetState();
+//		return false;
+//	}
+//
+//	@Override
+//	public String connect2Server() throws RemoteException {
+//		return null;
+//	}
+//
+//	@Override
+//	public String executeCommand(String clientID, String command) throws RemoteException {
+//		return clientID + ": " + command;
+//	}
 }

@@ -34,7 +34,7 @@ public enum ElectionHandler {
 				startElection(); // Starts a new election
 
 				// Resets the state again
-				resetState();
+				//---------------------resetState();
 			}
 		}, time2Wait);
 	}
