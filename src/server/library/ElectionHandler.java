@@ -5,10 +5,6 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import server.library.util.Server;
-import utils.State;
-
-import common.RAFTServers;
 
 public enum ElectionHandler {
 	INSTANCE;
@@ -52,10 +48,10 @@ public enum ElectionHandler {
 		// System.out.println("Current term " + term);
 		List<Server> servers = RAFTServers.INSTANCE.getServers();
 
-		
-		for (Server server : servers ){
-			new ServerConnection(server);
+		if (servers.get(0)!= null){
+			servers.get(0).setState(State.LEADER);
 		}
+
 	
 	}
 }

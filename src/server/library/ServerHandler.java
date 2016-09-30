@@ -1,21 +1,19 @@
 package server.library;
 
+import java.rmi.AccessException;
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
-import common.RAFTServers;
-import server.library.exception.ServerNotFoundException;
-import server.library.rm.RemoteMethods;
-import server.library.util.Server;
+import exceptions.ServerNotFoundException;
 
 public class ServerHandler implements RemoteMethods {
 
 	public void openConnection() {
 		startServer(RAFTServers.INSTANCE.getServers());
-
 		ElectionHandler.INSTANCE.startElectionHandler();
 	}
 
@@ -24,27 +22,23 @@ public class ServerHandler implements RemoteMethods {
 			throw new ServerNotFoundException();
 		}
 
-		int port = servers.get(0).getPort();
+		for( Server server : servers){
+			System.out.println(server.getPort());
+			try {
+				RemoteMethods stub = (RemoteMethods) UnicastRemoteObject.exportObject(this, server.getPort());
+				Registry registry = LocateRegistry.createRegistry(server.getPort());
+				registry.bind("ServerHandler", stub);
 
-		try {
-			RemoteMethods stub = (RemoteMethods) UnicastRemoteObject.exportObject(this, port);
+				System.out.println(server.getAddress()+"["+server.getPort()+"] started!");
 
-			// Bind the remote object's stub in the registry
-			Registry registry = LocateRegistry.createRegistry(port);
-			registry.bind("ServerHandler", stub);
-
-			System.err.println("Server ready on port " + port);
-
-			RAFTServers.INSTANCE.setCurrentServer(servers.get(0));
-
-		} catch (Exception e) {
-			System.err.println("Port " + port + " is busy");
-
-			servers.remove(0); // Removes the busy port
-			startServer(servers); // Tries again with the next port
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			} catch (AlreadyBoundException e) {
+				e.printStackTrace();
+			}
 		}
 	}
-	
+
 	@Override
 	public boolean requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
 		return candidateID == 1;

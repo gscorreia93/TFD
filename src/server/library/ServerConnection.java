@@ -5,9 +5,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
-import server.library.rm.RemoteMethods;
-import server.library.util.Server;
-
 public class ServerConnection extends Thread {
 
 	private final Server server;
@@ -37,7 +34,7 @@ public class ServerConnection extends Thread {
 				Registry registry = LocateRegistry.getRegistry(server.getPort());
 				RemoteMethods stub = (RemoteMethods) registry.lookup("ServerHandler");
 
-				result = stub.requestVote(term, server.getServerID(), lastLogIndex, lastLogTerm);
+		//		result = stub.requestVote(term, server.getServerID(), lastLogIndex, lastLogTerm);
 
 				System.out.println(result);
 
@@ -47,7 +44,6 @@ public class ServerConnection extends Thread {
 			}
 			
 		}
-		
 		
 		return result;
 	}

@@ -1,4 +1,4 @@
-package server.library.exception;
+package exceptions;
 
 public class ServerNotFoundException extends RuntimeException {
 

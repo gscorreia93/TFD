@@ -2,25 +2,28 @@ package client.library;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import server.library.rm.RemoteMethods;
 
-public class Client {
+import server.library.RemoteMethods;
+
+public class ClientLibrary {
 
 	public String request(String clientID, int port, String command) {
-		String result;
+		
+		String message=null;
+		
 		try {
 			Registry registry = LocateRegistry.getRegistry(port);
 			RemoteMethods stub = (RemoteMethods) registry.lookup("ServerHandler");
 
 			String response = stub.executeCommand(clientID, command);
-			result = "response: " + response;
+			message = "response: " + response;
 
-			System.out.println(result);
+			System.out.println(message);
 
 		} catch (Exception e) {
-			result = "Client exception: " + e.toString();
+			System.out.println("Client exception: " + e.toString());
 			e.printStackTrace();
 		}
-		return result;
+		return message;
 	}
 }

@@ -1,4 +1,4 @@
-package server.library.util;
+package server.library;
 
 public class Vote {
 	private int term;

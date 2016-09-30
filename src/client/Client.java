@@ -1,15 +1,15 @@
 package client;
 
 import java.util.UUID;
+import client.library.*;
 
-import client.library.Client;
-
-public class MainClient {
+public class Client {
 
 	public static void main(String[] args) {
+		
 		final String clientID = UUID.randomUUID().toString();
 		
-		Client c = new Client();
+		ClientLibrary c = new ClientLibrary();
 		
 		c.request(clientID, 8082, "Run");
 	}
