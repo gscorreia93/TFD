@@ -1,28 +1,22 @@
 package server.library;
 
-enum State {
-	LEADER,
-	FOLLOWER,
-	CANDIDATE
-}
-
 public class Server {
 
 	private int port;
 	private String address;
-	private State state;
+	private ServerState state;
 	
 	public Server (String address, int port){
 		this.address = address;
 		this.port = port;
-		this.state = State.FOLLOWER;
+		this.state = ServerState.FOLLOWER;
 	}
 
 	public int getPort() {
 		return port;
 	}
 	
-	public State getState(){
+	public ServerState getState(){
 		return state;
 	}
 	
@@ -38,7 +32,7 @@ public class Server {
 		this.address = address;
 	}
 	
-	public void setState(State newState){
+	public void setState(ServerState newState){
 		this.state = newState;
 		System.out.println(port+"  New State = "+newState);
 	}
