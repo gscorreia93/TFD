@@ -2,6 +2,9 @@ package server.library;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.ArrayBlockingQueue;
 
 public enum RAFTServers {
 	INSTANCE;
@@ -14,9 +17,12 @@ public enum RAFTServers {
 	}
 
 	private void loadServers() {
-		servers.add(new Server("localhost",8081));
-		servers.add(new Server("localhost",8082));
-		servers.add(new Server("localhost",8083));
+		
+		Queue<Object> responseQueue =  new PriorityQueue<Object>();
+		
+		servers.add(new Server("localhost",8081,1, new ArrayBlockingQueue<Request>(20), responseQueue));
+		servers.add(new Server("localhost",8082,2, new ArrayBlockingQueue<Request>(20), responseQueue));
+		servers.add(new Server("localhost",8083,3, new ArrayBlockingQueue<Request>(20), responseQueue));
 
 		System.out.println("Servers loaded");
 	}

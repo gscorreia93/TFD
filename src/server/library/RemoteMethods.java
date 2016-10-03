@@ -9,7 +9,7 @@ public interface RemoteMethods extends Remote {
 	
 	boolean requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException;
 	
-	boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, String[] entries, int leaderCommit) throws RemoteException;
+	boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit) throws RemoteException;
 	
 	String connect2Server() throws RemoteException;
 	
