@@ -9,11 +9,15 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 
+import server.library.log.LogReplication;
 import exceptions.ServerNotFoundException;
 
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
 
 	private static final long serialVersionUID = 1L;
+	
+	private final int CLIENT_REQUEST = -1;
+	
 	private ElectionHandler eh;
 	private Server server;
 	private Thread[] threadPool;
@@ -99,20 +103,27 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return new Response(term, true);
 	}
 
-	public boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, Entry[] entries,
+	public boolean appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries,
 			int leaderCommit) throws RemoteException {
+		
+		boolean logWasWritten = false;
+		
+		if (term == CLIENT_REQUEST) { // If it is a Client Request
+		
+			new LogReplication(server).leaderReplication(entries, eh.getTerm());
+		
+			// When a heartbeat is received
+		} else if (entries == null && server.getState() != ServerState.LEADER) {
 
-
-		if (entries == null && server.getState() != ServerState.LEADER) {
-
-			System.out.println("YES MASTER");
-
+			// System.out.println("YES MASTER");
+			
 			if(server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-
+				
 				for(int i = 0; i < threadPool.length; i++){
 					System.out.println("stopping thread");
-					if(threadPool[i] != null){
+					
+					if (threadPool[i] != null){
 						threadPool[i].interrupt();
 						try {
 							threadPool[i].join();
@@ -122,15 +133,21 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					}
 				}
 			}
-
+			
 			eh.setHasLeader();
 			eh.resetTimer();
 			eh.resetState();
-
+			
 			return true;
+			
+			// When a follower receives a request to appendEntries
+		} else if (server.getState() != ServerState.LEADER) {
+			
+			logWasWritten = new LogReplication(server).followerReplication(term,
+					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 		}
 
-		return false;
+		return logWasWritten;
 	}
 
 	public String connect2Server() throws RemoteException {

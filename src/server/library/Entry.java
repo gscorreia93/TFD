@@ -1,22 +1,26 @@
 package server.library;
 
 public class Entry {
-	private int term;
-	private int candidateID;
-	private int lastLogIndex;
-	private int lastLogTerm;
-	private String[] entries;
-	private int leaderCommit;
 
-	public Entry(int term, int candidateID, int lastLogIndex, int lastLogTerm,
-			String[] entries, int leaderCommit) {
-		super();
-		this.term = term;
-		this.candidateID = candidateID;
-		this.lastLogIndex = lastLogIndex;
-		this.lastLogTerm = lastLogTerm;
-		this.entries = entries;
-		this.leaderCommit = leaderCommit;
+	private String entry;
+	private String clientID;
+	private String requestID;
+
+	public Entry(String clientID, String requestID, String entry) {
+		this.entry = entry;
+		this.clientID = clientID;
+		this.requestID = requestID;
 	}
 
+	public String getEntry() {
+		return entry;
+	}
+
+	public String getClientID() {
+		return clientID;
+	}
+
+	public String getRequestID() {
+		return requestID;
+	}
 }
