@@ -48,9 +48,9 @@ public class ElectionHandler {
 		this.candidateServer.setState(state);
 	}
 
-	protected void setVoted() {
+	protected void setVoted(boolean voted) {
 
-		this.voted = true;
+		this.voted = voted;
 	}
 
 	protected boolean hasVoted() {
@@ -77,15 +77,14 @@ public class ElectionHandler {
 		timer = new Timer();
 
 		// Time for election timeout
-		long time2Wait = new Random().nextInt(2000) + 2000;
-
+		long time2Wait = new Random().nextInt(150) + 150;
+		
 		// election timeout
 		timer.schedule(new TimerTask() { // On election timeout
 			@Override
 			public void run() {
 				try {
-
-					System.out.println("I AM " + candidateServer.getState());
+					
 					if (candidateServer.getState() != ServerState.LEADER) {
 						System.out.println("starting election");
 						startElection();
@@ -95,7 +94,7 @@ public class ElectionHandler {
 				} // Starts a new election
 
 			}
-		}, time2Wait);
+		}, time2Wait, time2Wait);
 	}
 
 	protected void startElection() throws InterruptedException {
@@ -103,6 +102,7 @@ public class ElectionHandler {
 		term++;
 		// Transitions to candidate state
 		candidateServer.setState(ServerState.CANDIDATE);
+		hasLeader = false;
 
 		int voteCount = 0;
 
@@ -132,11 +132,11 @@ public class ElectionHandler {
 				
 				Response response = responseQueue.poll();
 								
-				if (response.isSuccessOrVoteGranted()) {
+				if (response != null && response.isSuccessOrVoteGranted()) {
 					voteCount++;
 				}
 				
-				if(term < response.getTerm()){
+				if(response != null && term < response.getTerm()){
 					candidateServer.setState(ServerState.FOLLOWER);
 					break;					
 				}

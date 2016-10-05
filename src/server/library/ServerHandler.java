@@ -21,6 +21,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private ElectionHandler eh;
 	private Server server;
 	private Thread[] threadPool;
+	private boolean jardas = false;
 
 	public ServerHandler() throws RemoteException {
 		super();
@@ -89,16 +90,20 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	}
 
 	public Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-
+		
+		if(term > eh.getTerm() && eh.getState() == ServerState.FOLLOWER){
+			eh.setTerm(term);
+		}
+		
 		if (eh.hasVoted() || term < eh.getTerm() || eh.getState() == ServerState.LEADER
 				|| (eh.getState() == ServerState.CANDIDATE && server.getServerID() != candidateID)) {
 			
 			return new Response(term, false);
 		}
 
-		System.out.println("EU VOTEI: " + candidateID);
+		System.out.println("EU VOTEI: " + candidateID + " NO TERM: " + eh.getTerm());
 
-		eh.setVoted();
+		eh.setVoted(true);
 		
 		return new Response(term, true);
 	}
@@ -115,13 +120,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
 
-			// System.out.println("YES MASTER");
+			 System.out.println("YES MASTER");
 			
 			if(server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
 				
 				for(int i = 0; i < threadPool.length; i++){
-					System.out.println("stopping thread");
+					//System.out.println("stopping thread");
 					
 					if (threadPool[i] != null){
 						threadPool[i].interrupt();
