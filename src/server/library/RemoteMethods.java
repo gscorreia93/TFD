@@ -7,5 +7,5 @@ public interface RemoteMethods extends Remote {
 	
 	Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException;
 	
-	public boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit) throws RemoteException;	
+	public Response appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit) throws RemoteException;	
 }

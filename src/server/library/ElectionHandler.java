@@ -15,10 +15,12 @@ public class ElectionHandler {
 	private Server candidateServer;
 	private boolean voted;
 	private boolean hasLeader;
+	private RAFTServers raftServers;
 
-	public ElectionHandler(Server candidateServer) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers) {
 
 		this.candidateServer = candidateServer;
+		this.raftServers = raftServers;
 	}
 
 	protected void startElectionHandler() {
@@ -84,11 +86,12 @@ public class ElectionHandler {
 			@Override
 			public void run() {
 				try {
-					
+
 					if (candidateServer.getState() != ServerState.LEADER) {
 						System.out.println("starting election");
 						startElection();
 					}
+					
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				} // Starts a new election
@@ -98,41 +101,49 @@ public class ElectionHandler {
 	}
 
 	protected void startElection() throws InterruptedException {
+		
 		// First increments the term
 		term++;
 		// Transitions to candidate state
-		candidateServer.setState(ServerState.CANDIDATE);
+		
+		if(candidateServer.getState() != ServerState.CANDIDATE){
+			candidateServer.setState(ServerState.CANDIDATE);
+		}
+		
 		hasLeader = false;
+		voted = false;
 
 		int voteCount = 0;
+		int totalVoteCount = 0;
 
-		List<Server> servers = RAFTServers.INSTANCE.getServers();
+		List<Server> servers = raftServers.getServers();
 
 		Queue<Response> responseQueue = candidateServer.getResponseQueue();
-
+		responseQueue.clear();
+		
 		int quorum = (servers.size() / 2) + 1;
 		
 		boolean requested = false;
 
-		while (voteCount < quorum && !hasLeader) {
-			
-			System.out.println("RequestForVote");
+		while (totalVoteCount < quorum && (voteCount < quorum && !hasLeader)) {
 			
 			if (!requested) {
 				for (Server server : servers) {
 
 					BlockingQueue<Request> bq = server.getRequestQueue();
 					
-					bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));
+					if(bq.remainingCapacity() != 0){
+						bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));
+					}
 				}
 				requested = true;
 			}
 
 			if (!responseQueue.isEmpty()) {
-				
 				Response response = responseQueue.poll();
+				totalVoteCount++;
 								
-				if (response != null && response.isSuccessOrVoteGranted()) {
+				if (response != null && response.isSuccessOrVoteGranted() && response.getTerm() == term) {
 					voteCount++;
 				}
 				
@@ -141,33 +152,35 @@ public class ElectionHandler {
 					break;					
 				}
 			}
-
-			Thread.sleep(1000);
-
 		}
-
-		if (!hasLeader) {
+		
+		//System.out.println("vote count: " + voteCount + " in term: " + term);
+		
+		
+		if (!hasLeader && voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
-			System.out.println("SOU LIDER!!!!");
+			System.out.println("SOU LIDER!!!! no term:" + term + " COM VOTOS COUNT: " + voteCount);
 
 			// heartbeat
 			timer.schedule(new TimerTask() { // heartbeat
 				@Override
 				public void run() {
 
-					System.out.println("Beep!");
+					//System.out.println("Beep!");
 
-					List<Server> servers = RAFTServers.INSTANCE.getServers();
+					List<Server> servers = raftServers.getServers();
 
 					for (Server server : servers) {
 
 						BlockingQueue<Request> bq = server.getRequestQueue();
 
-						bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));
+						if(bq.remainingCapacity() != 0){
+							bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));
+						}
 					}
 				}
-			}, 500, 500);
+			}, 50, 50);
 		}
 	}
 }

@@ -18,24 +18,25 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	
 	private final int CLIENT_REQUEST = -1;
 	
+	private RAFTServers raftServers;
 	private ElectionHandler eh;
 	private Server server;
 	private Thread[] threadPool;
-	private boolean jardas = false;
 
 	public ServerHandler() throws RemoteException {
 		super();
+		raftServers = new RAFTServers();
 	}
 
 	public void openConnection() {
-		server = startServer(RAFTServers.INSTANCE.getServers());
+		server = startServer(raftServers.getServers());
 
 		if (server != null) {
 
-			List<Server> servers = RAFTServers.INSTANCE.getServers();
+			List<Server> servers = raftServers.getServers();
 			threadPool = new Thread[servers.size()];
 
-			eh = new ElectionHandler(server);
+			eh = new ElectionHandler(server, raftServers);
 			eh.startElectionHandler();
 
 			while(true){
@@ -89,38 +90,46 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return null;
 	}
 
-	public Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
+	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
 		
-		if(term > eh.getTerm() && eh.getState() == ServerState.FOLLOWER){
+		if(term > eh.getTerm() && !eh.hasVoted()){
+			if(server.getState() != ServerState.FOLLOWER){
+				server.setState(ServerState.FOLLOWER);
+			}
 			eh.setTerm(term);
-		}
-		
-		if (eh.hasVoted() || term < eh.getTerm() || eh.getState() == ServerState.LEADER
-				|| (eh.getState() == ServerState.CANDIDATE && server.getServerID() != candidateID)) {
+			eh.resetTimer();
+			eh.resetState();
+			eh.setVoted(true);
 			
-			return new Response(term, false);
+//			System.out.println("EU VOTEI1: " + candidateID + " NO TERM: " + eh.getTerm() + " vindo do term: " + term);
+//			System.out.flush();
+						
+			return new Response(eh.getTerm(), true);
+			
+		}else if(server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())){
+			eh.setVoted(true);
+			
+//			System.out.println("EU VOTEI2: " + candidateID + " NO TERM: " + eh.getTerm() + " vindo do term: " + term);
+//			System.out.flush();
+			
+			return new Response(eh.getTerm(), true);
 		}
-
-		System.out.println("EU VOTEI: " + candidateID + " NO TERM: " + eh.getTerm());
-
-		eh.setVoted(true);
 		
-		return new Response(term, true);
+			return new Response(eh.getTerm(), false);
 	}
 
-	public boolean appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries,
-			int leaderCommit) throws RemoteException {
+	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		
-		boolean logWasWritten = false;
+		Response response = null;
 		
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 		
-			new LogReplication(server).leaderReplication(entries, eh.getTerm());
+			response = new LogReplication(server).leaderReplication(entries, eh.getTerm());
 		
 			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
 
-			 System.out.println("YES MASTER");
+			 //System.out.println("YES MASTER");
 			
 			if(server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
@@ -143,16 +152,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.resetTimer();
 			eh.resetState();
 			
-			return true;
-			
 			// When a follower receives a request to appendEntries
 		} else if (server.getState() != ServerState.LEADER) {
 			
-			logWasWritten = new LogReplication(server).followerReplication(term,
+			response = new LogReplication(server).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 		}
 
-		return logWasWritten;
+		return response;
 	}
 
 	public String connect2Server() throws RemoteException {
@@ -196,7 +203,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			while (true) {
 				try {
-
 					Request rq = requestQueue.take();
 					boolean sent = false;
 
@@ -207,9 +213,12 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 							try {
 								Response response = stub.requestVote(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
-
-								responseQueue.add(response);
-								sent = true;
+																
+								synchronized (response) {
+									responseQueue.add(response);
+									sent = true;
+								}
+								
 
 							} catch (RemoteException e) {
 								e.printStackTrace();
@@ -222,7 +231,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 							AppendEntriesRequest typedRequest = (AppendEntriesRequest) rq;
 
 							try {
-								boolean response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
+								Response response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
 								sent = true;
 
 							} catch (RemoteException e) {
