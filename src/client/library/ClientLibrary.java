@@ -2,7 +2,9 @@ package client.library;
 
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.UUID;
 
+import server.library.Entry;
 import server.library.RemoteMethods;
 
 public class ClientLibrary {
@@ -15,8 +17,10 @@ public class ClientLibrary {
 			Registry registry = LocateRegistry.getRegistry(port);
 			RemoteMethods stub = (RemoteMethods) registry.lookup("ServerHandler");
 
-			String response = stub.executeCommand(clientID, command);
-			message = "response: " + response;
+			Entry[] entries = new Entry[]{new Entry(command, clientID, UUID.randomUUID().toString())};
+			
+			boolean response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
+			message = "success: " + response;
 
 			System.out.println(message);
 

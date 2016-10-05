@@ -67,9 +67,9 @@ public class ElectionHandler {
 
 		this.hasLeader = true;
 	}
-	
-	protected void resetTimer(){
-		
+
+	protected void resetTimer() {
+
 		timer.cancel();
 	}
 
@@ -78,13 +78,13 @@ public class ElectionHandler {
 
 		// Time for election timeout
 		long time2Wait = new Random().nextInt(2000) + 2000;
-		
-		//election timeout
+
+		// election timeout
 		timer.schedule(new TimerTask() { // On election timeout
 			@Override
 			public void run() {
 				try {
-					
+
 					System.out.println("I AM " + candidateServer.getState());
 					if (candidateServer.getState() != ServerState.LEADER) {
 						System.out.println("starting election");
@@ -108,63 +108,66 @@ public class ElectionHandler {
 
 		List<Server> servers = RAFTServers.INSTANCE.getServers();
 
-		Queue<Object> responseQueue = candidateServer.getResponseQueue();
+		Queue<Response> responseQueue = candidateServer.getResponseQueue();
 
 		int quorum = (servers.size() / 2) + 1;
+		
+		boolean requested = false;
 
 		while (voteCount < quorum && !hasLeader) {
-						
-			System.out.println("RequestForVote");
-			voteCount = 0;
-			for (Server server : servers) {
-				
-				BlockingQueue<Request> bq = server.getRequestQueue();
-
-				bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));	
-			}
-
-			int responseCounter = 0;
-
-			while (responseCounter < servers.size() && !hasLeader) {				
-				if (!responseQueue.isEmpty()) {
-					if ((Boolean) responseQueue.poll()) {
-						voteCount++;
-					}
-
-					responseCounter++;
-				}
-				Thread.sleep(1000);
-			}
-
-			System.out.println("Vote Count: " + voteCount);
 			
-			if(hasLeader){
-				break;
+			System.out.println("RequestForVote");
+			
+			if (!requested) {
+				for (Server server : servers) {
+
+					BlockingQueue<Request> bq = server.getRequestQueue();
+					
+					bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));
+				}
+				requested = true;
 			}
+
+			if (!responseQueue.isEmpty()) {
+				
+				Response response = responseQueue.poll();
+								
+				if (response.isSuccessOrVoteGranted()) {
+					voteCount++;
+				}
+				
+				if(term < response.getTerm()){
+					candidateServer.setState(ServerState.FOLLOWER);
+					break;					
+				}
+			}
+
+			Thread.sleep(1000);
+
 		}
 
 		if (!hasLeader) {
 			candidateServer.setState(ServerState.LEADER);
 
 			System.out.println("SOU LIDER!!!!");
-			
-			//election timeout
-			timer.schedule(new TimerTask() { // On election timeout
+
+			// heartbeat
+			timer.schedule(new TimerTask() { // heartbeat
 				@Override
 				public void run() {
 
 					System.out.println("Beep!");
-					
+
 					List<Server> servers = RAFTServers.INSTANCE.getServers();
-	
-					for(Server server : servers){
-						
+
+					for (Server server : servers) {
+
 						BlockingQueue<Request> bq = server.getRequestQueue();
-												
-						bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));		
+
+						bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));
 					}
 				}
-			}, 500, 500);	
+			}, 500, 500);
 		}
 	}
 }

@@ -1,8 +1,6 @@
 package server.library;
 
-import java.net.ConnectException;
 import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -26,26 +24,26 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 	public void openConnection() {
 		server = startServer(RAFTServers.INSTANCE.getServers());
-		
+
 		if (server != null) {
-			
+
 			List<Server> servers = RAFTServers.INSTANCE.getServers();
 			threadPool = new Thread[servers.size()];
-			
+
 			eh = new ElectionHandler(server);
 			eh.startElectionHandler();
-			
+
 			while(true){
 				if(server.getState() == ServerState.LEADER || server.getState() == ServerState.CANDIDATE){
-					
+
 					for(Server sv : servers){
 						ServerThread thread = new ServerThread(sv.getRequestQueue(), sv.getResponseQueue(), sv);
 						thread.start();
 					}
-					
+
 					break;
 				}
-				
+
 				try {
 					Thread.sleep(500);
 				} catch (InterruptedException e) {
@@ -86,30 +84,32 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return null;
 	}
 
-	public boolean requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-		
+	public Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
+
 		if (eh.hasVoted() || term < eh.getTerm() || eh.getState() == ServerState.LEADER
 				|| (eh.getState() == ServerState.CANDIDATE && server.getServerID() != candidateID)) {
-			return false;
+			
+			return new Response(term, false);
 		}
 
 		System.out.println("EU VOTEI: " + candidateID);
 
 		eh.setVoted();
-		return true;
+		
+		return new Response(term, true);
 	}
 
 	public boolean appendEntries(int term, int candidateID, int lastLogIndex, int lastLogTerm, Entry[] entries,
 			int leaderCommit) throws RemoteException {
-		
-		
+
+
 		if (entries == null && server.getState() != ServerState.LEADER) {
 
 			System.out.println("YES MASTER");
-			
+
 			if(server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-				
+
 				for(int i = 0; i < threadPool.length; i++){
 					System.out.println("stopping thread");
 					if(threadPool[i] != null){
@@ -122,11 +122,11 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					}
 				}
 			}
-			
+
 			eh.setHasLeader();
 			eh.resetTimer();
 			eh.resetState();
-			
+
 			return true;
 		}
 
@@ -146,10 +146,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private class ServerThread extends Thread {
 
 		private BlockingQueue<Request> requestQueue;
-		private Queue<Object> responseQueue;
+		private Queue<Response> responseQueue;
 		private Server server;
 
-		public ServerThread(BlockingQueue<Request> requestQueue, Queue<Object> responseQueue, Server server) {
+		public ServerThread(BlockingQueue<Request> requestQueue, Queue<Response> responseQueue, Server server) {
 
 			this.requestQueue = requestQueue;
 			this.responseQueue = responseQueue;
@@ -161,50 +161,51 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			Registry registry;
 			RemoteMethods stub;
-			
+
 			while(true){
 				try {
 					registry = LocateRegistry.getRegistry(server.getPort());
 					stub = (RemoteMethods) registry.lookup("ServerHandler");
 					break;
 				} catch (Exception e) {
-					System.out.println("Connection failed, retrying...");
+					//System.out.println("Connection failed, retrying...");
 				}
 			}
-			
+
 			while (true) {
 				try {
-											
+
 					Request rq = requestQueue.take();
 					boolean sent = false;
-																	
-					if (rq.getClass() == RequestVoteRequest.class) {
-						
-						RequestVoteRequest typedRequest = (RequestVoteRequest) rq;
 
-						
-						while(!sent){
+					while(!sent){
+						if (rq.getClass() == RequestVoteRequest.class) {
+
+							RequestVoteRequest typedRequest = (RequestVoteRequest) rq;
+
 							try {
-								boolean response = stub.requestVote(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
-							
+								Response response = stub.requestVote(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
+
 								responseQueue.add(response);
 								sent = true;
-							
+
 							} catch (RemoteException e) {
+								e.printStackTrace();
 								System.out.println("Connection failed, retrying...");
 							}
-						}
-						
-					} else if (rq.getClass() == AppendEntriesRequest.class) {
-						
-						AppendEntriesRequest typedRequest = (AppendEntriesRequest) rq;
-						
-						try {
-							boolean response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
-							sent = true;
-							
-						} catch (RemoteException e) {
-							System.out.println("Connection failed, retrying...");
+
+
+						} else if (rq.getClass() == AppendEntriesRequest.class) {
+
+							AppendEntriesRequest typedRequest = (AppendEntriesRequest) rq;
+
+							try {
+								boolean response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
+								sent = true;
+
+							} catch (RemoteException e) {
+								//System.out.println("Connection failed, retrying...");
+							}
 						}
 					}
 				} catch (InterruptedException e) {
