@@ -5,7 +5,7 @@ public class AppendEntriesRequest extends Request {
 	private Entry[] entries;
 	private int leaderCommit;
 	
-	protected AppendEntriesRequest(int term, int serverId, int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit){
+	public AppendEntriesRequest(int term, int serverId, int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit){
 		super(term, serverId, lastLogIndex, lastLogTerm);
 		
 		this.entries = entries;

@@ -108,14 +108,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return new Response(term, true);
 	}
 
-	public boolean appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries,
+	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries,
 			int leaderCommit) throws RemoteException {
 		
-		boolean logWasWritten = false;
+		Response response = null;
 		
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 		
-			new LogReplication(server).leaderReplication(entries, eh.getTerm());
+			response = new LogReplication(server).leaderReplication(entries, eh.getTerm());
 		
 			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
@@ -143,16 +143,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.resetTimer();
 			eh.resetState();
 			
-			return true;
-			
 			// When a follower receives a request to appendEntries
 		} else if (server.getState() != ServerState.LEADER) {
 			
-			logWasWritten = new LogReplication(server).followerReplication(term,
+			response = new LogReplication(server).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 		}
 
-		return logWasWritten;
+		return response;
 	}
 
 	public String connect2Server() throws RemoteException {
@@ -222,7 +220,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 							AppendEntriesRequest typedRequest = (AppendEntriesRequest) rq;
 
 							try {
-								boolean response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
+								Response response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
 								sent = true;
 
 							} catch (RemoteException e) {

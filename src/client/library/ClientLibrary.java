@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import server.library.Entry;
 import server.library.RemoteMethods;
+import server.library.Response;
 
 public class ClientLibrary {
 
@@ -19,8 +20,8 @@ public class ClientLibrary {
 
 			Entry[] entries = new Entry[]{new Entry(command, clientID, UUID.randomUUID().toString())};
 			
-			boolean response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
-			message = "success: " + response;
+			Response response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
+			message = "success: " + response.isSuccessOrVoteGranted();
 
 			System.out.println(message);
 

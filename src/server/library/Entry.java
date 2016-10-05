@@ -1,6 +1,10 @@
 package server.library;
 
-public class Entry {
+import java.io.Serializable;
+
+public class Entry implements Serializable {
+
+	private static final long serialVersionUID = 1L;
 
 	private String entry;
 	private String clientID;

@@ -2,19 +2,21 @@ package server.library.log;
 
 import java.util.List;
 
+import server.library.AppendEntriesRequest;
 import server.library.Entry;
 import server.library.RAFTServers;
+import server.library.Response;
 import server.library.Server;
 import server.library.ServerState;
 
 public class LogReplication {
 
 	private Server server;
-	
+
 	public LogReplication(Server server) {
 		this.server = server;
 	}
-	
+
 	/**
 	 * Synchronized method to start the leader logs replication.
 	 * 
@@ -22,32 +24,55 @@ public class LogReplication {
 	 * @param term
 	 * @return true
 	 */
-	public synchronized boolean leaderReplication(Entry[] entries, int term) {
+	public synchronized Response leaderReplication(Entry[] entries, int term) {
+System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + term);
+
 		if (server.getState() != ServerState.LEADER) {
 			// Sends the leader address back to the client
-		
+
 		} else {
 			// Writes log
-			LogHandler.INSTANCE.writeLog(entries, term);
-			
+			LogHandler lh = LogHandler.INSTANCE;
+
+			lh.writeLog(entries, term);
+
 			// Send log to others
 			List<Server> servers = RAFTServers.INSTANCE.getServers();
-			
+
+			LogEntry lastLog = lh.getLastLog();
+			int leaderCommit = lh.getLastCommitedLogIndex();
+
 			for (Server s : servers) {
-				s.getRequestQueue().add(null);
-				
+				s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
+						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
 			}
+
+			int voteCount = 0;
+			int quorum = (servers.size() / 2) + 1;
 			
-			
-			for (Server s : servers) {
-				s.getResponseQueue().poll();
-				
+			while (voteCount < quorum) {
+				for (Server s : servers) {
+					if (!s.getResponseQueue().isEmpty()) {
+						Response response = s.getResponseQueue().poll();
+						
+						if (response != null && response.isSuccessOrVoteGranted()) {
+							voteCount++;
+System.out.println("voteCount " + voteCount);
+						}
+					}
+				}
+
+				try {
+					Thread.sleep(300);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 			}
-			
+
 		}
-		return true;
+		return new Response(term, true);
 	}
-	
+
 	/**
 	 * Follower writes a client log received
 	 * from the leader.
@@ -64,20 +89,32 @@ public class LogReplication {
 	 * 2. false if log doesn’t contain an entry at prevLogIndex
 	 * 		whose term matches prevLogTerm (§5.3)
 	 */
-	public boolean followerReplication(int term, int leaderId,
+	public Response followerReplication(int term, int leaderId,
 			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int currentTerm) {
+System.out.println("Replicated log with term " + term + " and currentTerm " + currentTerm);
 
 		LogHandler lh = LogHandler.INSTANCE;
-		
-		if (term < currentTerm || !lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
-			return false;
+
+		Response response;
+
+		if (term < currentTerm) {
+			response = new Response(currentTerm, false);
+			response.setTermRejected();
+			// return response;
+
+		} else if (!lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
+			response = new Response(currentTerm, false);
+			response.setLogDeprecated();
+			// return response;
 		}
-		
+
+		// If an existing entry conflicts with a new one (same index but 
+		// different terms), delete the existing entry and all that follow it (§5.3)
 		lh.deleteConflitingLogs(prevLogIndex, prevLogTerm);
-		
+
 		// Writes log
 		lh.writeLog(entries, term);
-		
-		return true;
+
+		return new Response(currentTerm, true);
 	}
 }

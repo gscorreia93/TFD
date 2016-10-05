@@ -5,7 +5,13 @@ public class LogEntry {
 	private int logIndex;
 	private int logTerm;
 	private String log;
+	private boolean commited = false;
 
+	public LogEntry() {
+		this.logIndex = 0;
+		this.logTerm = 0;
+	}
+	
 	public LogEntry(int logIndex, int logTerm, String log) {
 		this.logIndex = logIndex;
 		this.logTerm = logTerm;
@@ -20,5 +26,12 @@ public class LogEntry {
 	}
 	public String getLog() {
 		return log;
+	}
+
+	public boolean isCommited() {
+		return commited;
+	}
+	public void setCommited(boolean commited) {
+		this.commited = commited;
 	}
 }
