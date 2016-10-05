@@ -15,8 +15,8 @@ public class ClientLibrary {
 			Registry registry = LocateRegistry.getRegistry(port);
 			RemoteMethods stub = (RemoteMethods) registry.lookup("ServerHandler");
 
-			String response = stub.executeCommand(clientID, command);
-			message = "response: " + response;
+			//String response = stub.executeCommand(clientID, command);
+			//message = "response: " + response;
 
 			System.out.println(message);
 

@@ -10,9 +10,9 @@ public class Server {
 	private ServerState state;
 	private int serverID;
 	private BlockingQueue<Request> requestQueue;
-	private Queue<Object> responseQueue;
+	private Queue<Response> responseQueue;
 	
-	public Server (String address, int port, int serverID, BlockingQueue<Request> requestQueue, Queue<Object> responseQueue){
+	public Server (String address, int port, int serverID, BlockingQueue<Request> requestQueue, Queue<Response> responseQueue){
 		this.address = address;
 		this.port = port;
 		this.state = ServerState.FOLLOWER;
@@ -50,7 +50,7 @@ public class Server {
 		return requestQueue;
 	}
 
-	public Queue<Object> getResponseQueue() {
+	public Queue<Response> getResponseQueue() {
 		return responseQueue;
 	}
 
