@@ -154,8 +154,6 @@ public class ElectionHandler {
 			}
 		}
 		
-		//System.out.println("vote count: " + voteCount + " in term: " + term);
-		
 		
 		if (!hasLeader && voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
@@ -175,7 +173,7 @@ public class ElectionHandler {
 
 						BlockingQueue<Request> bq = server.getRequestQueue();
 
-						if(bq.remainingCapacity() != 0){
+						if (bq.remainingCapacity() != 0){
 							bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));
 						}
 					}

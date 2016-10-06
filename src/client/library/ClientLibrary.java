@@ -18,7 +18,7 @@ public class ClientLibrary {
 			Registry registry = LocateRegistry.getRegistry(port);
 			RemoteMethods stub = (RemoteMethods) registry.lookup("ServerHandler");
 
-			Entry[] entries = new Entry[]{new Entry(command, clientID, UUID.randomUUID().toString())};
+			Entry[] entries = new Entry[]{new Entry(UUID.randomUUID().toString(), clientID, command)};
 			
 			Response response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
 			message = "success: " + response.isSuccessOrVoteGranted();

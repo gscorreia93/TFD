@@ -40,24 +40,26 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 			List<Server> servers = new RAFTServers().getServers();
 
 			LogEntry lastLog = lh.getLastLog();
-			int leaderCommit = lh.getLastCommitedLogIndex();
+			int leaderCommit = 10; // lh.getLastCommitedLogIndex();
 
 			for (Server s : servers) {
+System.out.println("Appending to server " + s.getPort() + " with " + entries.length + " entries");
 				s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
 						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
 			}
 
-			int voteCount = 0;
+			int responsesCount = 0;
 			int quorum = (servers.size() / 2) + 1;
-			
-			while (voteCount < quorum) {
+
+			while (responsesCount < quorum) {
 				for (Server s : servers) {
+
 					if (!s.getResponseQueue().isEmpty()) {
 						Response response = s.getResponseQueue().poll();
-						
+System.out.println("response " + response);						
 						if (response != null && response.isSuccessOrVoteGranted()) {
-							voteCount++;
-System.out.println("voteCount " + voteCount);
+							responsesCount++;
+System.out.println("responsesCount " + responsesCount);
 						}
 					}
 				}
@@ -70,6 +72,7 @@ System.out.println("voteCount " + voteCount);
 			}
 
 		}
+		
 		return new Response(term, true);
 	}
 

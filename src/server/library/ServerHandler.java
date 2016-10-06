@@ -43,7 +43,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				if(server.getState() == ServerState.LEADER || server.getState() == ServerState.CANDIDATE){
 
 					for(Server sv : servers){
-						ServerThread thread = new ServerThread(sv.getRequestQueue(), sv.getResponseQueue(), sv);
+						ServerThread thread = new ServerThread(sv);
 						thread.start();
 					}
 
@@ -123,20 +123,18 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 		
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-		
+System.out.println("appendEntries LEADER");
 			response = new LogReplication(server).leaderReplication(entries, eh.getTerm());
-		
+
 			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
 
-			 //System.out.println("YES MASTER");
-			
-			if(server.getState() != ServerState.FOLLOWER){
+			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-				
-				for(int i = 0; i < threadPool.length; i++){
+
+				for (int i = 0; i < threadPool.length; i++){
 					//System.out.println("stopping thread");
-					
+
 					if (threadPool[i] != null){
 						threadPool[i].interrupt();
 						try {
@@ -147,29 +145,19 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					}
 				}
 			}
-			
+
 			eh.setHasLeader();
 			eh.resetTimer();
 			eh.resetState();
-			
+
 			// When a follower receives a request to appendEntries
 		} else if (server.getState() != ServerState.LEADER) {
-			
+
 			response = new LogReplication(server).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 		}
 
 		return response;
-	}
-
-	public String connect2Server() throws RemoteException {
-		return null;
-	}
-
-	public String executeCommand(String clientID, String command) throws RemoteException {
-
-		System.out.println("CLIENT RPC RECIEVED");
-		return clientID + ": " + command;
 	}
 
 	private class ServerThread extends Thread {
@@ -178,20 +166,18 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		private Queue<Response> responseQueue;
 		private Server server;
 
-		public ServerThread(BlockingQueue<Request> requestQueue, Queue<Response> responseQueue, Server server) {
-
-			this.requestQueue = requestQueue;
-			this.responseQueue = responseQueue;
+		public ServerThread(Server server) {
+			this.requestQueue = server.getRequestQueue();
+			this.responseQueue = server.getResponseQueue();
 			this.server = server;
 		}
 
 		@Override
 		public void run() {
-
 			Registry registry;
 			RemoteMethods stub;
 
-			while(true){
+			while (true) {
 				try {
 					registry = LocateRegistry.getRegistry(server.getPort());
 					stub = (RemoteMethods) registry.lookup("ServerHandler");
@@ -204,9 +190,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			while (true) {
 				try {
 					Request rq = requestQueue.take();
+
 					boolean sent = false;
 
-					while(!sent){
+					while (!sent) {
 						if (rq.getClass() == RequestVoteRequest.class) {
 
 							RequestVoteRequest typedRequest = (RequestVoteRequest) rq;
@@ -218,7 +205,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 									responseQueue.add(response);
 									sent = true;
 								}
-								
 
 							} catch (RemoteException e) {
 								e.printStackTrace();
@@ -229,9 +215,11 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 						} else if (rq.getClass() == AppendEntriesRequest.class) {
 
 							AppendEntriesRequest typedRequest = (AppendEntriesRequest) rq;
-
+if (typedRequest.getLeaderCommit() == 10) System.out.println(rq);
 							try {
-								Response response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
+								Response response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(),
+										typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
+
 								sent = true;
 
 							} catch (RemoteException e) {
