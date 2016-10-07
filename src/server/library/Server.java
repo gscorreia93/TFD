@@ -55,8 +55,8 @@ public class Server {
 	}
 
 	public void setState(ServerState newState){
+if (!this.state.equals(newState)) System.out.println(port+"  New State = "+newState);
 		this.state = newState;
-		System.out.println(port+"  New State = "+newState);
 	}
 	
 }

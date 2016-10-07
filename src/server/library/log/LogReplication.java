@@ -1,20 +1,24 @@
 package server.library.log;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 
 import server.library.AppendEntriesRequest;
 import server.library.Entry;
-import server.library.RAFTServers;
+import server.library.Request;
 import server.library.Response;
 import server.library.Server;
+import server.library.ServerHandler;
 import server.library.ServerState;
 
 public class LogReplication {
 
 	private Server server;
+	private List<Server> servers;
 
-	public LogReplication(Server server) {
+	public LogReplication(Server server, List<Server> servers) {
 		this.server = server;
+		this.servers = servers;
 	}
 
 	/**
@@ -36,43 +40,58 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 
 			lh.writeLog(entries, term);
 
-			// Send log to others
-			List<Server> servers = new RAFTServers().getServers();
-
+			
 			LogEntry lastLog = lh.getLastLog();
 			int leaderCommit = 10; // lh.getLastCommitedLogIndex();
 
 			for (Server s : servers) {
-System.out.println("Appending to server " + s.getPort() + " with " + entries.length + " entries");
-				s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
-						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
+				BlockingQueue<Request> bq = s.getRequestQueue();
+
+				if (bq.remainingCapacity() > 0) {
+					// Replicate log to other servers
+					s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
+							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
+				}
 			}
 
 			int responsesCount = 0;
-			int quorum = (servers.size() / 2) + 1;
+			int quorum = (servers.size() / 2); // Only half the servers need to respond
 
 			while (responsesCount < quorum) {
 				for (Server s : servers) {
 
-					if (!s.getResponseQueue().isEmpty()) {
+					if (!s.getResponseQueue().isEmpty()) { // Gets the server result
 						Response response = s.getResponseQueue().poll();
-System.out.println("response " + response);						
+
 						if (response != null && response.isSuccessOrVoteGranted()) {
 							responsesCount++;
-System.out.println("responsesCount " + responsesCount);
 						}
 					}
 				}
 
 				try {
+					// Waits to see again if there is a new result from a server
 					Thread.sleep(300);
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
+
+			} // eof while
+
+			// Sends request for all servers to commit
+			for (Server s : servers) {
+				BlockingQueue<Request> bq = s.getRequestQueue();
+
+				if (bq.remainingCapacity() > 0) {
+					s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, server.getServerID(),
+							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
+				}
 			}
 
-		}
-		
+			// TODO Needs to wait for the commit results to reply to the client
+
+		} // eof if
+
 		return new Response(term, true);
 	}
 
@@ -119,5 +138,15 @@ System.out.println("Replicated log with term " + term + " and currentTerm " + cu
 		lh.writeLog(entries, term);
 
 		return new Response(currentTerm, true);
+	}
+
+	/**
+	 * Only commits a log, there are no validations.
+	 */
+	public void commitLog(int term,
+			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) {
+		
+		// TODO Implement the log commit
+		System.out.println("Commiting on server " + server.getPort() + " as a " + server.getState());
 	}
 }
