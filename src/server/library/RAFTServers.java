@@ -21,11 +21,11 @@ public class RAFTServers {
 	}
 
 	private void loadServers() {
-		Queue<Response> responseQueue =  new ArrayBlockingQueue<Response>(20);
+		Queue<Response> voteQueue =  new ArrayBlockingQueue<Response>(20);
 
-		servers.add(new Server("localhost", 8081, 1, new ArrayBlockingQueue<Request>(20), responseQueue));
-		servers.add(new Server("localhost", 8082, 2, new ArrayBlockingQueue<Request>(20), responseQueue));
-		servers.add(new Server("localhost", 8083, 3, new ArrayBlockingQueue<Request>(20), responseQueue));
+		servers.add(new Server("localhost", 8081, 1, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+		servers.add(new Server("localhost", 8082, 2, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+		servers.add(new Server("localhost", 8083, 3, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
 	}
 
 	public List<Server> getServers() {

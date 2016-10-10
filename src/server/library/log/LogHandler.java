@@ -40,7 +40,7 @@ public enum LogHandler {
 			return true;
 
 		for (int i = logs.size() - 1; i >= 0; i--) {
-			if (logs.get(i).getLogIndex() == (logIndex - 1) && logs.get(i).getLogTerm() == logTerm) {
+			if (logs.get(i).getLogIndex() == logIndex && logs.get(i).getLogTerm() == logTerm) {
 				return true;
 			}
 		}

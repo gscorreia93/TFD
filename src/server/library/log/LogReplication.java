@@ -71,7 +71,6 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 
 						if (response != null) {
 							if (response.isSuccessOrVoteGranted()) {
-System.out.println(s.getPort());
 								responsesCount++;
 								commitServers.add(s);
 
@@ -110,7 +109,30 @@ System.out.println(s.getPort() + " deprecated; last index " + response.getLastLo
 				}
 			}
 
-			// TODO Needs to wait for the commit results to reply to the client
+			// Needs to wait for the commit results to reply to the client
+			while (responsesCount < servers.size()) {
+				for (Server s : servers) {
+
+					if (!s.getResponseQueue().isEmpty()) { // Gets the server result
+						Response response = s.getResponseQueue().poll();
+
+						if (response != null) {
+							if (response.isSuccessOrVoteGranted()) {
+								responsesCount++;
+							}
+						}
+					}
+				}
+
+				try {
+					// Waits to see again if there is a new result from a server
+					Thread.sleep(300);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+
+			} // eof while
+
 
 		} // eof if
 

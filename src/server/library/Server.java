@@ -11,14 +11,18 @@ public class Server {
 	private int serverID;
 	private BlockingQueue<Request> requestQueue;
 	private Queue<Response> responseQueue;
+	private Queue<Response> voteQueue;
 
-	public Server (String address, int port, int serverID, BlockingQueue<Request> requestQueue, Queue<Response> responseQueue){
+	public Server (String address, int port, int serverID,
+			BlockingQueue<Request> requestQueue, Queue<Response> responseQueue, Queue<Response> voteQueue) {
+
 		this.address = address;
 		this.port = port;
 		this.state = ServerState.FOLLOWER;
 		this.serverID = serverID;
 		this.requestQueue = requestQueue;
 		this.responseQueue = responseQueue;
+		this.voteQueue = voteQueue;
 	}
 
 	public int getPort() {
@@ -51,6 +55,10 @@ public class Server {
 
 	public Queue<Response> getResponseQueue() {
 		return responseQueue;
+	}
+
+	public Queue<Response> getVoteQueue() {
+		return voteQueue;
 	}
 
 	public void setState(ServerState newState){

@@ -109,8 +109,8 @@ public class ElectionHandler {
 
 		List<Server> servers = raftServers.getServers();
 
-		Queue<Response> responseQueue = candidateServer.getResponseQueue();
-		responseQueue.clear();
+		Queue<Response> voteQueue = candidateServer.getVoteQueue();
+		voteQueue.clear();
 
 		int quorum = (servers.size() / 2) + 1;
 
@@ -123,15 +123,15 @@ public class ElectionHandler {
 
 					BlockingQueue<Request> bq = server.getRequestQueue();
 
-					if(bq.remainingCapacity() != 0){
+					if (bq.remainingCapacity() != 0) {
 						bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));
 					}
 				}
 				requested = true;
 			}
 
-			if (!responseQueue.isEmpty()) {
-				Response response = responseQueue.poll();
+			if (!voteQueue.isEmpty()) {
+				Response response = voteQueue.poll();
 				totalVoteCount++;
 
 				if (response != null && response.isSuccessOrVoteGranted() && response.getTerm() == term) {

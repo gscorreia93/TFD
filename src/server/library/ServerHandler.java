@@ -168,11 +168,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 		private BlockingQueue<Request> requestQueue;
 		private Queue<Response> responseQueue;
+		private Queue<Response> voteQueue;
 		private Server server;
 
 		public ServerThread(Server server) {
 			this.requestQueue = server.getRequestQueue();
 			this.responseQueue = server.getResponseQueue();
+			this.voteQueue = server.getVoteQueue();
 			this.server = server;
 		}
 
@@ -204,7 +206,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 								Response response = stub.requestVote(typedRequest.getTerm(), typedRequest.getServerId(), typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
 																
 								synchronized (response) {
-									responseQueue.add(response);
+									voteQueue.add(response);
 									sent = true;
 								}
 
@@ -222,7 +224,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 										typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
 
 								if (response != null) {
-System.out.println("response " + this.server.getPort());
 									// To replicate a log
 									synchronized (response) {
 										responseQueue.add(response);
