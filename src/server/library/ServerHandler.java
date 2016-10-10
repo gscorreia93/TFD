@@ -70,19 +70,18 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		}
 
 		for (Server server : servers) {
-			System.out.println(server.getPort());
 			try {
 				Registry registry = LocateRegistry.createRegistry(server.getPort());
 				registry.bind("ServerHandler", this);
 
-				System.out.println(server.getAddress() + "[" + server.getPort() + "] started!");
+				System.out.println(server.getAddress() + "[ " + server.getPort() + " ] started!");
 
 				return server;
 
 			} catch (RemoteException e) {
-				System.out.println("Port already bounded, trying another port.");
+				System.err.println(server.getPort() + " already bounded, trying another port.");
 			} catch (AlreadyBoundException e) {
-				System.out.println("Port already bounded, trying another port.");
+				System.err.println(server.getPort() + " already bounded, trying another port.");
 			}
 		}
 		throw new ServerNotFoundException();
@@ -108,9 +107,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		} else if(server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
 			eh.setVoted(true);
 
-//			System.out.println("EU VOTEI2: " + candidateID + " NO TERM: " + eh.getTerm() + " vindo do term: " + term);
-//			System.out.flush();
-
 			return new Response(eh.getTerm(), true);
 		}
 		return new Response(eh.getTerm(), false);
@@ -127,7 +123,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
 
-			new LogReplication(server, raftServers.getServers()).commitLog(term, prevLogIndex, prevLogTerm, entries, leaderCommit);
+			response = new LogReplication(server, raftServers.getServers()).commitLog(leaderCommit, eh.getTerm());
 
 
 		// When a follower receives a request to appendEntries
@@ -226,7 +222,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 										typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(), typedRequest.getEntries(), typedRequest.getLeaderCommit());
 
 								if (response != null) {
-
+System.out.println("response " + this.server.getPort());
 									// To replicate a log
 									synchronized (response) {
 										responseQueue.add(response);

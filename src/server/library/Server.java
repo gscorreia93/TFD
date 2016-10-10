@@ -11,7 +11,7 @@ public class Server {
 	private int serverID;
 	private BlockingQueue<Request> requestQueue;
 	private Queue<Response> responseQueue;
-	
+
 	public Server (String address, int port, int serverID, BlockingQueue<Request> requestQueue, Queue<Response> responseQueue){
 		this.address = address;
 		this.port = port;
@@ -24,28 +24,27 @@ public class Server {
 	public int getPort() {
 		return port;
 	}
-	
+
 	public ServerState getState(){
 		return state;
 	}
-	
+
 	public String getAddress() {
 		return address;
 	}
-	
+
 	public void setPort(int port) {
 		this.port = port;
 	}
-	
+
 	public void setAddress(String address) {
 		this.address = address;
 	}
-	
-	public int getServerID(){
-		
+
+	public int getServerID() {
 		return serverID;
 	}
-	
+
 	public BlockingQueue<Request> getRequestQueue() {
 		return requestQueue;
 	}
@@ -55,8 +54,7 @@ public class Server {
 	}
 
 	public void setState(ServerState newState){
-if (!this.state.equals(newState)) System.out.println(port+"  New State = "+newState);
+if (!this.state.equals(newState)) System.out.println(port + "  New State = " + newState);
 		this.state = newState;
 	}
-	
 }

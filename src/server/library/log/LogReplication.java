@@ -1,5 +1,6 @@
 package server.library.log;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
@@ -35,14 +36,18 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 			// Sends the leader address back to the client
 
 		} else {
-			// Writes log
 			LogHandler lh = LogHandler.INSTANCE;
 
-			lh.writeLog(entries, term);
+			// To store the servers that are valid to commit the entry
+			List<Server> commitServers = new ArrayList<>();
+			commitServers.add(server);
 
-			
 			LogEntry lastLog = lh.getLastLog();
-			int leaderCommit = 10; // lh.getLastCommitedLogIndex();
+			int leaderCommit = lh.getLastCommitedLogIndex();
+
+			// Used to commit this log latter
+			int currentIndex = lh.writeLogEntry(entries, term);
+
 
 			for (Server s : servers) {
 				BlockingQueue<Request> bq = s.getRequestQueue();
@@ -54,6 +59,7 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 				}
 			}
 
+
 			int responsesCount = 0;
 			int quorum = (servers.size() / 2); // Only half the servers need to respond
 
@@ -63,8 +69,22 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 					if (!s.getResponseQueue().isEmpty()) { // Gets the server result
 						Response response = s.getResponseQueue().poll();
 
-						if (response != null && response.isSuccessOrVoteGranted()) {
-							responsesCount++;
+						if (response != null) {
+							if (response.isSuccessOrVoteGranted()) {
+System.out.println(s.getPort());
+								responsesCount++;
+								commitServers.add(s);
+
+							} else if (response.isLogDeprecated()) {
+System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
+
+								// Sends all the logs from the received last Index
+//s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
+//lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
+
+							} else if (response.isTermRejected()) {
+
+							}
 						}
 					}
 				}
@@ -78,13 +98,15 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 
 			} // eof while
 
+
+
 			// Sends request for all servers to commit
-			for (Server s : servers) {
+			for (Server s : commitServers) {
 				BlockingQueue<Request> bq = s.getRequestQueue();
 
 				if (bq.remainingCapacity() > 0) {
 					s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, server.getServerID(),
-							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
+							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, currentIndex));
 				}
 			}
 
@@ -112,41 +134,43 @@ System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + te
 	 * 		whose term matches prevLogTerm (§5.3)
 	 */
 	public Response followerReplication(int term, int leaderId,
-			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int currentTerm) {
-System.out.println("Replicated log with term " + term + " and currentTerm " + currentTerm);
+			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
+System.out.println("Replicating.. currentTerm " + term + " and thisTerm " + thisTerm);
 
 		LogHandler lh = LogHandler.INSTANCE;
 
 		Response response;
-
-		if (term < currentTerm) {
-			response = new Response(currentTerm, false);
+System.out.println("prevLogIndex " + prevLogIndex + " & prevLogTerm " + prevLogTerm + " = " + lh.containsLogRecord(prevLogIndex, prevLogTerm));
+		if (thisTerm < term) {
+			response = new Response(thisTerm, false);
 			response.setTermRejected();
-			// return response;
+			return response;
 
 		} else if (!lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
-			response = new Response(currentTerm, false);
+			response = new Response(thisTerm, false);
 			response.setLogDeprecated();
-			// return response;
+			response.setLastLogIndex(lh.getLastLog().getLogIndex());
+			return response;
 		}
 
 		// If an existing entry conflicts with a new one (same index but 
 		// different terms), delete the existing entry and all that follow it (§5.3)
-		lh.deleteConflitingLogs(prevLogIndex, prevLogTerm);
+		lh.deleteConflitingLogs(prevLogIndex + 1, term);
 
 		// Writes log
-		lh.writeLog(entries, term);
+		lh.writeLogEntry(entries, term);
 
-		return new Response(currentTerm, true);
+		return new Response(thisTerm, true);
 	}
 
 	/**
-	 * Only commits a log, there are no validations.
+	 * Only commits a log on the leaderCommit index, there are no validations.
 	 */
-	public void commitLog(int term,
-			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) {
+	public Response commitLog(int leaderCommit, int thisTerm) {
+		System.out.println("Commiting on server " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
 		
-		// TODO Implement the log commit
-		System.out.println("Commiting on server " + server.getPort() + " as a " + server.getState());
+		LogHandler.INSTANCE.commitLogEntry(leaderCommit);
+		
+		return new Response(thisTerm, true);
 	}
 }

@@ -12,10 +12,10 @@ public class Response implements Serializable{
 	private int term;
 	private int leaderID;
 	private int denyCause;
+	private int lastLogIndex;
 	private boolean successOrVoteGranted;
 
-	public Response(int term, boolean successOrVoteGranted){
-
+	public Response(int term, boolean successOrVoteGranted) {
 		this.term = term;
 		this.successOrVoteGranted = successOrVoteGranted;
 	}
@@ -44,5 +44,12 @@ public class Response implements Serializable{
 	}
 	public void setLogDeprecated() {
 		denyCause = LOG_DEPRECATED;
+	}
+
+	public int getLastLogIndex() {
+		return lastLogIndex;
+	}
+	public void setLastLogIndex(int lastLogIndex) {
+		this.lastLogIndex = lastLogIndex;
 	}
 }

@@ -8,54 +8,27 @@ import client.library.*;
 public class Client {
 
 	public static void main(String[] args) {
-		
+
 		final String clientID = UUID.randomUUID().toString();
-		
+
 		ClientLibrary c = new ClientLibrary();
-		c.request(clientID, 8081, "hello");
 
-		
-//		Scanner leitor = new Scanner(System.in);
-//		int option = 0;
-//		int x = 0;
-//		int y = 0;
-//		
-//		while(true){
-//			
-//			Menu();
-//			
-//			option = leitor.nextInt();
-//			
-//			if( option == 3 ){
-//				System.out.println("Good bye :)");
-//				break;
-//			}
-//			
-//			System.out.print("Digit X: ");
-//			x = leitor.nextInt();
-//			System.out.print("Digit Y: ");
-//			y = leitor.nextInt();
-//			
-//			if (option == 1){
-//				c.request(clientID, 8081, x+"+"+y);
-//			}
-//			else{
-//				if (option == 2){
-//					c.request(clientID, 8081, x+"-"+y);
-//				}
-//				else{
-//					if (option > 3 || option < 1){
-//						System.out.println("Invalid command. Try again");
-//					}
-//				}
-//			}
-//		}
+		String entry = null;
+		Scanner s = new Scanner(System.in);
 
-	}
-	
-	public static void Menu (){
-		System.out.println("--- CLIENT MENU ---");
-		System.out.print("1. x+y\n2. x-y\n3. exit\nOption >");		
+		while (true) {
+			System.out.println("Insert command :");
+			entry = s.nextLine();
+
+			if (entry != null && entry.equalsIgnoreCase("q"))
+				break;
+
+			c.request(clientID, 8081, entry);
+		}
+
+		System.out.println("Client terminated");
+
+		s.close();
 	}
 
 }

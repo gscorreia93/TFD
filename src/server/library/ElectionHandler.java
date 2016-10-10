@@ -36,42 +36,34 @@ public class ElectionHandler {
 	}
 
 	protected int getTerm() {
-
 		return term;
 	}
 
 	protected ServerState getState() {
-
 		return candidateServer.getState();
 	}
 
 	protected void setServerState(ServerState state) {
-
 		this.candidateServer.setState(state);
 	}
 
 	protected void setVoted(boolean voted) {
-
 		this.voted = voted;
 	}
 
 	protected boolean hasVoted() {
-
 		return voted;
 	}
 
 	protected void setTerm(int term) {
-
 		this.term = term;
 	}
 
 	protected void setHasLeader() {
-
 		this.hasLeader = true;
 	}
 
 	protected void resetTimer() {
-
 		timer.cancel();
 	}
 
@@ -79,8 +71,8 @@ public class ElectionHandler {
 		timer = new Timer();
 
 		// Time for election timeout
-		long time2Wait = new Random().nextInt(150) + 150;
-		
+		long time2Wait = new Random().nextInt(500) + 1500;
+
 		// election timeout
 		timer.schedule(new TimerTask() { // On election timeout
 			@Override
@@ -91,7 +83,7 @@ public class ElectionHandler {
 						System.out.println("starting election");
 						startElection();
 					}
-					
+
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				} // Starts a new election
@@ -101,15 +93,14 @@ public class ElectionHandler {
 	}
 
 	protected void startElection() throws InterruptedException {
-		
 		// First increments the term
 		term++;
 		// Transitions to candidate state
 		
-		if(candidateServer.getState() != ServerState.CANDIDATE){
+		if (candidateServer.getState() != ServerState.CANDIDATE) {
 			candidateServer.setState(ServerState.CANDIDATE);
 		}
-		
+
 		hasLeader = false;
 		voted = false;
 
@@ -120,18 +111,18 @@ public class ElectionHandler {
 
 		Queue<Response> responseQueue = candidateServer.getResponseQueue();
 		responseQueue.clear();
-		
+
 		int quorum = (servers.size() / 2) + 1;
-		
+
 		boolean requested = false;
 
 		while (totalVoteCount < quorum && (voteCount < quorum && !hasLeader)) {
-			
+
 			if (!requested) {
 				for (Server server : servers) {
 
 					BlockingQueue<Request> bq = server.getRequestQueue();
-					
+
 					if(bq.remainingCapacity() != 0){
 						bq.add(new RequestVoteRequest(term, candidateServer.getServerID(), 0, 0));
 					}
@@ -142,19 +133,19 @@ public class ElectionHandler {
 			if (!responseQueue.isEmpty()) {
 				Response response = responseQueue.poll();
 				totalVoteCount++;
-								
+
 				if (response != null && response.isSuccessOrVoteGranted() && response.getTerm() == term) {
 					voteCount++;
 				}
-				
-				if(response != null && term < response.getTerm()){
+
+				if (response != null && term < response.getTerm()) {
 					candidateServer.setState(ServerState.FOLLOWER);
-					break;					
+					break;
 				}
 			}
 		}
-		
-		
+
+
 		if (!hasLeader && voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
