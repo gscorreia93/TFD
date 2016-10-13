@@ -3,19 +3,20 @@ package server.library;
 import java.util.List;
 import java.util.Queue;
 import java.util.Random;
-import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class ElectionHandler {
-
-	private Timer timer;
 
 	private int term = 0;
 	private Server candidateServer;
 	private boolean voted;
-	private boolean hasLeader;
 	private RAFTServers raftServers;
+	
+	private ScheduledExecutorService sEs;
 
 	public ElectionHandler(Server candidateServer, RAFTServers raftServers) {
 
@@ -58,23 +59,20 @@ public class ElectionHandler {
 	protected void setTerm(int term) {
 		this.term = term;
 	}
-
-	protected void setHasLeader() {
-		this.hasLeader = true;
-	}
-
+	
 	protected void resetTimer() {
-		timer.cancel();
+			
+		sEs.shutdownNow();
 	}
 
 	protected void resetState() {
-		timer = new Timer();
+		
+		sEs = Executors.newScheduledThreadPool(2);
 
 		// Time for election timeout
-		long time2Wait = new Random().nextInt(500) + 1500;
-
-		// election timeout
-		timer.schedule(new TimerTask() { // On election timeout
+		long time2Wait = new Random().nextInt(150) + 150;
+		
+		Runnable runnable = new TimerTask() { // On election timeout
 			@Override
 			public void run() {
 				try {
@@ -89,7 +87,9 @@ public class ElectionHandler {
 				} // Starts a new election
 
 			}
-		}, time2Wait, time2Wait);
+		};
+		
+		sEs.scheduleAtFixedRate(runnable, time2Wait, time2Wait, TimeUnit.MILLISECONDS);
 	}
 
 	protected void startElection() throws InterruptedException {
@@ -101,7 +101,6 @@ public class ElectionHandler {
 			candidateServer.setState(ServerState.CANDIDATE);
 		}
 
-		hasLeader = false;
 		voted = false;
 
 		int voteCount = 0;
@@ -116,8 +115,8 @@ public class ElectionHandler {
 
 		boolean requested = false;
 
-		while (totalVoteCount < quorum && (voteCount < quorum && !hasLeader)) {
-
+		while (totalVoteCount < quorum && (voteCount < quorum)) {
+			
 			if (!requested) {
 				for (Server server : servers) {
 
@@ -146,13 +145,12 @@ public class ElectionHandler {
 		}
 
 
-		if (!hasLeader && voteCount >= quorum) {
+		if (voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
 			System.out.println("SOU LIDER!!!! no term:" + term + " COM VOTOS COUNT: " + voteCount);
 
-			// heartbeat
-			timer.schedule(new TimerTask() { // heartbeat
+			Runnable runnable = new TimerTask() { // heartbeat
 				@Override
 				public void run() {
 
@@ -165,11 +163,18 @@ public class ElectionHandler {
 						BlockingQueue<Request> bq = server.getRequestQueue();
 
 						if (bq.remainingCapacity() != 0){
-							bq.add(new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0));
+							AppendEntriesRequest aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0);
+							
+							if(!bq.contains(aR)){
+								bq.add(aR);
+							}
 						}
 					}
 				}
-			}, 50, 50);
+			};
+			
+			// heartbeat
+			sEs.scheduleAtFixedRate(runnable, 50, 50, TimeUnit.MILLISECONDS);
 		}
 	}
 }

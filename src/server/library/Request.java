@@ -30,4 +30,35 @@ public abstract class Request {
 	public int getLastLogTerm() {
 		return lastLogTerm;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + lastLogIndex;
+		result = prime * result + lastLogTerm;
+		result = prime * result + serverId;
+		result = prime * result + term;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Request other = (Request) obj;
+		if (lastLogIndex != other.lastLogIndex)
+			return false;
+		if (lastLogTerm != other.lastLogTerm)
+			return false;
+		if (serverId != other.serverId)
+			return false;
+		if (term != other.term)
+			return false;
+		return true;
+	}
 }

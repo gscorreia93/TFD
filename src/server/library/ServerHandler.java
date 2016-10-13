@@ -153,7 +153,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				}
 			}
 
-			eh.setHasLeader();
 			eh.resetTimer();
 			eh.resetState();
 		}
