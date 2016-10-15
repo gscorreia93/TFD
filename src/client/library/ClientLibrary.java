@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -22,18 +23,40 @@ public class ClientLibrary {
 
 	private RemoteMethods stub;
 
+	/*
+	 * Connecta-se ao primeiro servidor da lista que tiver online
+	 */
 	public boolean connectToServer(String clientID){
 
 		String[] serverData=null;
 		String serverAddress="";
 		int port=0;
 		BufferedReader br=null;
+		
+		boolean connected = false;
+		
 		try {
 			br = new BufferedReader(new FileReader("src/server/library/servers.txt"));
-			serverData = br.readLine().split(":");
-			serverAddress = serverData[0];
-			port = Integer.parseInt(serverData[1]);
+			while((serverAddress = br.readLine())!=null && !connected){
+				serverData = serverAddress.split(":");
+				serverAddress = serverData[0];
+				port = Integer.parseInt(serverData[1]);
+			
+				try {
+					Registry registry = LocateRegistry.getRegistry(serverAddress,port);
+					stub = (RemoteMethods) registry.lookup("ServerHandler");
+					System.out.println("I'm "+clientID+" --- Connected to "+serverAddress+"["+port+"]");
+					connected = true;
+				} catch (RemoteException e) {
+					System.err.println("Failed to connect to "+serverAddress+"["+port+"]");
+				} catch (NotBoundException e) {
+					e.printStackTrace();
+				}
+			
+			}
+			
 			br.close();
+			
 		} catch (FileNotFoundException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -42,18 +65,7 @@ public class ClientLibrary {
 			e.printStackTrace();
 		}
 
-		try {
-			Registry registry = LocateRegistry.getRegistry(serverAddress,port);
-			stub = (RemoteMethods) registry.lookup("ServerHandler");
-			System.out.println("I'm "+clientID+" --- Connected to "+serverAddress+"["+port+"]");
-			return true;
-		} catch (RemoteException e) {
-			System.err.println("Failed to connect to "+serverAddress+"["+port+"]");
-		} catch (NotBoundException e) {
-			e.printStackTrace();
-		}
-
-		return false;
+		return connected;
 	}
 
 
@@ -67,12 +79,11 @@ public class ClientLibrary {
 		try {
 			response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
 			message = "success: " + response.isSuccessOrVoteGranted();
+			System.out.println(message);
 		} catch (RemoteException e) {
-			// TODO Auto-generated catch block
+			System.err.println("Failed to receive responde from server");
 			e.printStackTrace();
 		}
-
-		System.out.println(message);
 
 		return message;
 	}

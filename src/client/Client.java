@@ -31,8 +31,5 @@ public class Client {
 
 			s.close();
 		}
-		
-		
 	}
-
 }
