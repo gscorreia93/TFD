@@ -1,5 +1,7 @@
 package server.library;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -74,8 +76,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				Registry registry = LocateRegistry.createRegistry(server.getPort());
 				registry.bind("ServerHandler", this);
 
-				System.out.println(server.getAddress() + "[ " + server.getPort() + " ] started!");
-
+				System.out.println(server.getAddress() + "[" + server.getPort() + "] started!");
 				return server;
 
 			} catch (RemoteException e) {
@@ -116,7 +117,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-
+			System.out.println(entries[0].getClientID()+" says '"+entries[0].getEntry()+"'");
 			response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
 
 

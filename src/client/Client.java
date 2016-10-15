@@ -12,23 +12,27 @@ public class Client {
 		final String clientID = UUID.randomUUID().toString();
 
 		ClientLibrary c = new ClientLibrary();
+		
+		if (c.connectToServer(clientID)){
+			String entry = null;
+			Scanner s = new Scanner(System.in);
 
-		String entry = null;
-		Scanner s = new Scanner(System.in);
+			while (true) {
+				System.out.print("Insert command ('q' to exit): ");
+				entry = s.nextLine();
 
-		while (true) {
-			System.out.println("Insert command :");
-			entry = s.nextLine();
+				if (entry != null && entry.equalsIgnoreCase("q"))
+					break;
 
-			if (entry != null && entry.equalsIgnoreCase("q"))
-				break;
+				c.request(clientID, entry);
+			}
 
-			c.request(clientID, 8081, entry);
+			System.out.println("Client terminated");
+
+			s.close();
 		}
-
-		System.out.println("Client terminated");
-
-		s.close();
+		
+		
 	}
 
 }

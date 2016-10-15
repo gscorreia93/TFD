@@ -1,5 +1,12 @@
 package server.library;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -22,10 +29,41 @@ public class RAFTServers {
 
 	private void loadServers() {
 		Queue<Response> voteQueue =  new ArrayBlockingQueue<Response>(20);
-
-		servers.add(new Server("localhost", 8081, 1, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
-		servers.add(new Server("localhost", 8082, 2, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
-		servers.add(new Server("localhost", 8083, 3, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+//		String serverIP="";
+//		try {
+//			serverIP = InetAddress.getLocalHost().getHostAddress();
+//		} catch (UnknownHostException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+		BufferedReader br;
+		try {
+			br = new BufferedReader(new FileReader("src/server/library/servers.txt"));
+					
+			String serverAddress="";
+			String [] serverData=null;
+			int port=0;
+			
+			int numberOfServers=0;
+			
+			while((serverAddress = br.readLine())!=null){
+				serverData = serverAddress.split(":");
+				serverAddress = serverData[0];
+				port = Integer.parseInt(serverData[1]);
+				numberOfServers++;
+				servers.add(new Server(serverAddress, port,numberOfServers, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+			}
+			
+			br.close();
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	public List<Server> getServers() {
