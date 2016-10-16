@@ -98,9 +98,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.resetState();
 			eh.setVoted(true);
 
-//			System.out.println("EU VOTEI1: " + candidateID + " NO TERM: " + eh.getTerm() + " vindo do term: " + term);
-//			System.out.flush();
-
 			return new Response(eh.getTerm(), true);
 
 		} else if(server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
@@ -115,9 +112,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			System.out.println(entries[0].getClientID()+" says '"+entries[0].getEntry()+"'");
 			response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
-
 
 		// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {

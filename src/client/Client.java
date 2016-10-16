@@ -9,7 +9,7 @@ public class Client {
 
 	public static void main(String[] args) {
 
-		final String clientID = UUID.randomUUID().toString();
+		final String clientID = UUID.randomUUID().toString().substring(0, 7);
 
 		ClientLibrary c = new ClientLibrary();
 		

@@ -30,17 +30,15 @@ public class LogReplication {
 	 * @return true
 	 */
 	public synchronized Response leaderReplication(Entry[] entries, int term) {
-System.out.println("leaderReplication: " + ServerState.LEADER + " & term: " + term);
-
 		if (server.getState() != ServerState.LEADER) {
 			// Sends the leader address back to the client
 
 		} else {
+System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() + "'");
 			LogHandler lh = LogHandler.INSTANCE;
 
 			// To store the servers that are valid to commit the entry
 			List<Server> commitServers = new ArrayList<>();
-			commitServers.add(server);
 
 			LogEntry lastLog = lh.getLastLog();
 			int leaderCommit = lh.getLastCommitedLogIndex();
@@ -99,7 +97,10 @@ System.out.println(s.getPort() + " deprecated; last index " + response.getLastLo
 
 
 
-			// Sends request for all servers to commit
+			// First commits in the leader
+			commitLog(currentIndex, term);
+
+			// Then sends request for all other servers to commit
 			for (Server s : commitServers) {
 				BlockingQueue<Request> bq = s.getRequestQueue();
 
@@ -108,32 +109,7 @@ System.out.println(s.getPort() + " deprecated; last index " + response.getLastLo
 							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, currentIndex));
 				}
 			}
-
-			// Needs to wait for the commit results to reply to the client
-			while (responsesCount < servers.size()) {
-				for (Server s : servers) {
-
-					if (!s.getResponseQueue().isEmpty()) { // Gets the server result
-						Response response = s.getResponseQueue().poll();
-
-						if (response != null) {
-							if (response.isSuccessOrVoteGranted()) {
-								responsesCount++;
-							}
-						}
-					}
-				}
-
-				try {
-					// Waits to see again if there is a new result from a server
-					Thread.sleep(300);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			} // eof while
-
-
+			// There's no need to wait for the commit results to reply to the client
 		} // eof if
 
 		return new Response(term, true);
@@ -157,27 +133,27 @@ System.out.println(s.getPort() + " deprecated; last index " + response.getLastLo
 	 */
 	public Response followerReplication(int term, int leaderId,
 			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
-System.out.println("Replicating.. currentTerm " + term + " and thisTerm " + thisTerm);
 
 		LogHandler lh = LogHandler.INSTANCE;
 
 		Response response;
-System.out.println("prevLogIndex " + prevLogIndex + " & prevLogTerm " + prevLogTerm + " = " + lh.containsLogRecord(prevLogIndex, prevLogTerm));
+
 		if (thisTerm < term) {
 			response = new Response(thisTerm, false);
 			response.setTermRejected();
 			return response;
 
 		} else if (!lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
+
+			// If an existing entry conflicts with a new one (same index but 
+			// different terms), delete the existing entry and all that follow it (§5.3)
+			lh.deleteConflitingLogs(prevLogIndex + 1, term);
+
 			response = new Response(thisTerm, false);
 			response.setLogDeprecated();
 			response.setLastLogIndex(lh.getLastLog().getLogIndex());
 			return response;
 		}
-
-		// If an existing entry conflicts with a new one (same index but 
-		// different terms), delete the existing entry and all that follow it (§5.3)
-		lh.deleteConflitingLogs(prevLogIndex + 1, term);
 
 		// Writes log
 		lh.writeLogEntry(entries, term);
@@ -189,10 +165,10 @@ System.out.println("prevLogIndex " + prevLogIndex + " & prevLogTerm " + prevLogT
 	 * Only commits a log on the leaderCommit index, there are no validations.
 	 */
 	public Response commitLog(int leaderCommit, int thisTerm) {
-		System.out.println("Commiting on server " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
-		
-		LogHandler.INSTANCE.commitLogEntry(leaderCommit);
-		
+		String commitedLog = LogHandler.INSTANCE.commitLogEntry(leaderCommit);
+
+System.out.println("Commiting '" + commitedLog + "' on " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
+
 		return new Response(thisTerm, true);
 	}
 }

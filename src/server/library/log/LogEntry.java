@@ -5,6 +5,7 @@ public class LogEntry {
 	private int logIndex;
 	private int logTerm;
 	private String log;
+	private String clientID;
 	private boolean commited = false;
 
 	public LogEntry() {
@@ -12,10 +13,11 @@ public class LogEntry {
 		this.logTerm = 0;
 	}
 	
-	public LogEntry(int logIndex, int logTerm, String log) {
+	public LogEntry(int logIndex, int logTerm, String log, String clientID) {
 		this.logIndex = logIndex;
 		this.logTerm = logTerm;
 		this.log = log;
+		this.clientID = clientID;
 	}
 
 	public int getLogIndex() {
@@ -26,6 +28,9 @@ public class LogEntry {
 	}
 	public String getLog() {
 		return log;
+	}
+	public String getClientID() {
+		return clientID;
 	}
 
 	public boolean isCommited() {
