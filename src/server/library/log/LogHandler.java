@@ -21,7 +21,7 @@ public enum LogHandler {
 	public int writeLogEntry(Entry[] entries, int logTerm) {
 		// Writes the log
 		for (Entry e : entries) {
-			logs.add(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry()));
+			logs.add(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry(), e.getClientID()));
 		}
 		return logs.size();
 	}
@@ -29,10 +29,14 @@ public enum LogHandler {
 	/**
 	 * Commits a log entry
 	 */
-	public void commitLogEntry(int commitEntryIndex) {
+	public String commitLogEntry(int commitEntryIndex) {
+		String commitedLog = null;
+
 		if (logs.size() == commitEntryIndex) {
 			logs.get(commitEntryIndex - 1).setCommited(true);
+			commitedLog = logs.get(commitEntryIndex - 1).getLog();
 		}
+		return commitedLog;
 	}
 
 	public boolean containsLogRecord(int logIndex, int logTerm) {
