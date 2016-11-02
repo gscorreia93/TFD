@@ -46,6 +46,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					for (Server sv : servers) {
 						ServerThread thread = new ServerThread(sv);
 						thread.start();
+						threadPool[i] = thread;
 					}
 
 					break;
