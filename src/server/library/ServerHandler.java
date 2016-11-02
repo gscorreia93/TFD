@@ -43,10 +43,12 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			while (true) {
 				if (server.getState() == ServerState.LEADER || server.getState() == ServerState.CANDIDATE) {
 
+					int counter = 0;
 					for (Server sv : servers) {
 						ServerThread thread = new ServerThread(sv);
 						thread.start();
-						threadPool[i] = thread;
+						threadPool[counter] = thread;
+						counter++;
 					}
 
 					break;
