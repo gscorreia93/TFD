@@ -148,8 +148,6 @@ public class ElectionHandler {
 			}
 		}
 		
-		System.out.println(totalVoteCount + " " + voteCount);
-
 		if (voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
