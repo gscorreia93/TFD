@@ -1,12 +1,10 @@
 package server.library;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -46,7 +44,7 @@ public class RAFTServers {
 				port = Integer.parseInt(serverData[1]);
 				numberOfServer++;			
 				if (serverAddress.equals(InetAddress.getLocalHost().getHostAddress()) || serverAddress.equals("localhost") || serverAddress.equals("127.0.0.1")){
-					servers.add(new Server(serverAddress, port,numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+					servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
 				}
 			}
 			

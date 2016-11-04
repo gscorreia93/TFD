@@ -15,13 +15,15 @@ public class ElectionHandler {
 	private Server candidateServer;
 	private boolean voted;
 	private RAFTServers raftServers;
+	private ServerThreadPool serverThreadPool;
 	
 	private ScheduledExecutorService sEs;
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool) {
 
 		this.candidateServer = candidateServer;
 		this.raftServers = raftServers;
+		this.serverThreadPool = serverThreadPool;
 	}
 
 	protected void startElectionHandler() {
@@ -76,12 +78,14 @@ public class ElectionHandler {
 			@Override
 			public void run() {
 				try {
-
+					
 					if (candidateServer.getState() != ServerState.LEADER) {
+						List<Server> servers = raftServers.getServers();
+						serverThreadPool.startThreads(servers);
 						System.out.println("starting election");
 						startElection();
 					}
-
+					
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				} // Starts a new election
@@ -89,7 +93,7 @@ public class ElectionHandler {
 			}
 		};
 		
-		sEs.scheduleAtFixedRate(runnable, time2Wait, time2Wait, TimeUnit.MILLISECONDS);
+		sEs.scheduleWithFixedDelay(runnable, time2Wait, time2Wait, TimeUnit.MILLISECONDS);
 	}
 
 	protected void startElection() throws InterruptedException {
@@ -143,7 +147,8 @@ public class ElectionHandler {
 				}
 			}
 		}
-
+		
+		System.out.println(totalVoteCount + " " + voteCount);
 
 		if (voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
@@ -174,7 +179,7 @@ public class ElectionHandler {
 			};
 			
 			// heartbeat
-			sEs.scheduleAtFixedRate(runnable, 50, 50, TimeUnit.MILLISECONDS);
+			sEs.scheduleWithFixedDelay(runnable, 50, 50, TimeUnit.MILLISECONDS);
 		}
 	}
 }
