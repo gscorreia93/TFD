@@ -27,7 +27,7 @@ public class LogReplication {
 	 * 
 	 * @param entries
 	 * @param term
-	 * @return true
+	 * @return true when at least half the servers have written the logs.
 	 */
 	public synchronized Response leaderReplication(Entry[] entries, int term) {
 		if (server.getState() != ServerState.LEADER) {
@@ -39,6 +39,8 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 			// To store the servers that are valid to commit the entry
 			List<Server> commitServers = new ArrayList<>();
+			// To store the threads submitting the logs
+			List<LogSubmitThread> logSubmits = new ArrayList<>();
 
 			LogEntry lastLog = lh.getLastLog();
 			int leaderCommit = lh.getLastCommitedLogIndex();
@@ -48,13 +50,13 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 
 			for (Server s : servers) {
-				BlockingQueue<Request> bq = s.getRequestQueue();
+				// Replicate log to the other servers
+				LogSubmitThread l = new LogSubmitThread(s, term, server.getServerID(),
+						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit);
 
-				if (bq.remainingCapacity() > 0) {
-					// Replicate log to other servers
-					s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
-							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
-				}
+				logSubmits.add(l);
+				// Orders the thread to submit the log to the remote server
+				l.run();
 			}
 
 
@@ -62,27 +64,12 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 			int quorum = (servers.size() / 2); // Only half the servers need to respond
 
 			while (responsesCount < quorum) {
-				for (Server s : servers) {
+				for (int i = logSubmits.size() - 1; i >= 0; i--) {
 
-					if (!s.getResponseQueue().isEmpty()) { // Gets the server result
-						Response response = s.getResponseQueue().poll();
-
-						if (response != null) {
-							if (response.isSuccessOrVoteGranted()) {
-								responsesCount++;
-								commitServers.add(s);
-
-							} else if (response.isLogDeprecated()) {
-System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
-
-								// Sends all the logs from the received last Index
-//s.getRequestQueue().add(new AppendEntriesRequest(term, server.getServerID(),
-//lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit));
-
-							} else if (response.isTermRejected()) {
-
-							}
-						}
+					if (logSubmits.get(i).isSubmitted()) {
+						commitServers.add(logSubmits.get(i).getServer());
+						// When the thread has ended it is removed from the queue
+						logSubmits.remove(i);
 					}
 				}
 
@@ -110,6 +97,7 @@ System.out.println(s.getPort() + " deprecated; last index " + response.getLastLo
 				}
 			}
 			// There's no need to wait for the commit results to reply to the client
+
 		} // eof if
 
 		return new Response(term, true);
