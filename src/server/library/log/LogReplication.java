@@ -17,10 +17,10 @@ public class LogReplication {
 	private LogHandler lh;
 	private List<Server> servers;
 
-	public LogReplication(Server server, List<Server> servers) {
+	public LogReplication(Server server, List<Server> servers, LogHandler lh) {
 		this.server = server;
 		this.servers = servers;
-		lh = new LogHandler("LOG_" + server.getPort());
+		this.lh = lh;
 	}
 
 	/**
@@ -148,7 +148,7 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 	public Response commitLog(int leaderCommit, int thisTerm) {
 		String commitedLog = lh.commitLogEntry(leaderCommit);
 
-System.out.println("Commiting '" + commitedLog + "' on " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
+System.out.println(leaderCommit + ": Commiting '" + commitedLog + "' on " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
 
 		return new Response(thisTerm, true);
 	}

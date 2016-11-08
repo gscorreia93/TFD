@@ -1,7 +1,10 @@
 package server.library.log;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,13 +22,13 @@ public class LogHandler {
 		logs = new ArrayList<>();
 
 		try {
-			readFile(filename);
+			openFile(filename);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void readFile(String filename) throws IOException {
+	private void openFile(String filename) throws IOException {
 		logFile = new File(filename);
 		if (!logFile.exists()) {
 			logFile.createNewFile();
@@ -41,6 +44,17 @@ public class LogHandler {
 		for (Entry e : entries) {
 			logs.add(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry(), e.getClientID()));
 		}
+		
+		try {
+			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(logFile, true)));
+			for (Entry e : entries) {
+				out.println(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry(), e.getClientID()));
+			}
+		    out.close();
+		} catch (Exception e) {
+		   // do something
+		}
+
 		return logs.size();
 	}
 

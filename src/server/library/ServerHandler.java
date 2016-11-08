@@ -8,6 +8,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
 
 import exceptions.ServerNotFoundException;
+import server.library.log.LogHandler;
 import server.library.log.LogReplication;
 
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
@@ -17,14 +18,18 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	public static final int COMMIT_LOG = -2;
 	private final int CLIENT_REQUEST = -1;
 
+	private LogHandler lh;
 	private RAFTServers raftServers;
-	private ElectionHandler eh;
+	
 	private Server server;
+	private ElectionHandler eh;
 	private ServerThreadPool serverThreadPool;
+	
 	private int leaderID;
 	
 	public ServerHandler() throws RemoteException {
 		super();
+
 		raftServers = new RAFTServers();
 	}
 
@@ -40,6 +45,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			eh = new ElectionHandler(server, raftServers, serverThreadPool);
 			eh.startElectionHandler();
+
+			// Starts the log handler
+			lh = new LogHandler("LOG_" + server.getPort());
+
 		} else {
 			System.out.println("Incorrect server configuration, server not starting");
 			System.exit(-1);
@@ -105,17 +114,17 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				response.setLeaderID(leaderID);
 			}
 			else{
-				response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
+				response = new LogReplication(server, raftServers.getServers(), lh).leaderReplication(entries, eh.getTerm());
 			}
 		// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
-			response = new LogReplication(server, raftServers.getServers()).commitLog(leaderCommit, eh.getTerm());
+			response = new LogReplication(server, raftServers.getServers(), lh).commitLog(leaderCommit, eh.getTerm());
 
 
 		// When a follower receives a request to appendEntries
 		} else if (entries != null && server.getState() != ServerState.LEADER) {
 
-			response = new LogReplication(server, raftServers.getServers()).followerReplication(term,
+			response = new LogReplication(server, raftServers.getServers(), lh).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 
 

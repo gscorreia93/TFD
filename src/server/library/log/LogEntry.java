@@ -2,6 +2,8 @@ package server.library.log;
 
 public class LogEntry {
 
+	private final String SPLITTER = "|$|";
+
 	private int logIndex;
 	private int logTerm;
 	private String log;
@@ -39,4 +41,8 @@ public class LogEntry {
 	public void setCommited(boolean commited) {
 		this.commited = commited;
 	}
+	
+	public String toString() {
+        return logIndex + SPLITTER + logTerm + SPLITTER + log + SPLITTER + clientID + SPLITTER + commited;
+    }
 }
