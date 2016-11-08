@@ -38,7 +38,8 @@ public class ClientLibrary {
 			serverData = server.split(":");
 			serverAddress = serverData[0];
 			port = Integer.parseInt(serverData[1]);
-			return registryToServer(clientID,serverAddress, port);	
+			if (registryToServer(clientID,serverAddress, port))
+				return true;
 		}
 	
 		return false;
@@ -58,14 +59,14 @@ public class ClientLibrary {
 			response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
 			//fez o pedido a um follower
 			if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false){
-				System.out.println("A falar codm um follower....");
+				System.out.println("Ups.. a Follower. Trying Leader");
 				serverData = servers.get(response.getLeaderID()-1).split(":");
 				registryToServer(clientID,serverData[0], Integer.parseInt(serverData[1]));
 			}
 			message = "success: " + response.isSuccessOrVoteGranted();
 			System.out.println(message);
 		} catch (RemoteException e) {
-			System.err.println("Failed to receive responde from server\nTrying another server...");
+			System.err.println("Failed to receive response from server\nTrying another server...");
 			connectToServer(clientID);
 
 			//e.printStackTrace();

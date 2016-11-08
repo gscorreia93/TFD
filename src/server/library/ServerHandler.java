@@ -109,7 +109,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 			if(server.getState() != ServerState.LEADER){ 
-				System.out.println("Recebi do CLIENTE");
+				System.out.println("Client contact me. Redirect to Leader ("+leaderID+")" );
 				response = new Response(-1,false);
 				response.setLeaderID(leaderID);
 			}
