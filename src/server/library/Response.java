@@ -27,11 +27,15 @@ public class Response implements Serializable{
 	public boolean isSuccessOrVoteGranted() {
 		return successOrVoteGranted;
 	}
-
-	public int getLeaderID() {
+		
+	public void setLeaderID (int leaderId){
+		leaderID = leaderId;
+	}
+	
+	public int getLeaderID(){
 		return leaderID;
 	}
-
+	
 	public boolean isTermRejected() {
 		return denyCause == TERM_REJECTED;
 	}

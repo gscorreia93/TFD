@@ -21,7 +21,8 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private ElectionHandler eh;
 	private Server server;
 	private ServerThreadPool serverThreadPool;
-
+	private int leaderID;
+	
 	public ServerHandler() throws RemoteException {
 		super();
 		raftServers = new RAFTServers();
@@ -76,6 +77,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.resetState();
 			eh.setVoted(true);
 
+			serverThreadPool.interruptThreads();
+			serverThreadPool.purgeQueues();
+
+//			if (!eh.isFollower()) {
+//				eh.setServerState(ServerState.FOLLOWER);
+//			}
+
 			return new Response(eh.getTerm(), true);
 
 		} else if(server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
@@ -89,10 +97,11 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
-		
+
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 			if(server.getState() != ServerState.LEADER){ 
 				response = new Response(-1,false);
+				response.setLeaderID(leaderID);
 			}
 			else{
 				response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
@@ -111,10 +120,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 		// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
-			
+			leaderID = leaderId;
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-
+	
 				serverThreadPool.interruptThreads();
 				serverThreadPool.purgeQueues();
 			}
