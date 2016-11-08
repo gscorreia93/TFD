@@ -21,8 +21,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private ElectionHandler eh;
 	private Server server;
 	private ServerThreadPool serverThreadPool;
-	private int leaderID;
-	
+
 	public ServerHandler() throws RemoteException {
 		super();
 		raftServers = new RAFTServers();
@@ -35,7 +34,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			List<Server> servers = raftServers.getServers();
 			serverThreadPool = new ServerThreadPool(servers.size());
-			
+
 			serverThreadPool.startThreads(servers);
 
 			eh = new ElectionHandler(server, raftServers, serverThreadPool);
@@ -69,7 +68,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-		
+
 		if (term > eh.getTerm()) {
 
 			eh.setTerm(term);
@@ -91,7 +90,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			return new Response(eh.getTerm(), true);
 		}
-		
+
 		return new Response(eh.getTerm(), false);
 	}
 
@@ -99,31 +98,27 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			if(server.getState() != ServerState.LEADER){ 
-				response = new Response(-1,false);
-				response.setLeaderID(leaderID);
-			}
-			else{
-				response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
-			}
-		// Commits a log in all servers
+			response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
+
+			// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
+
 			response = new LogReplication(server, raftServers.getServers()).commitLog(leaderCommit, eh.getTerm());
 
 
-		// When a follower receives a request to appendEntries
+			// When a follower receives a request to appendEntries
 		} else if (entries != null && server.getState() != ServerState.LEADER) {
 
 			response = new LogReplication(server, raftServers.getServers()).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 
 
-		// When a heartbeat is received
+			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
-			leaderID = leaderId;
+
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-	
+
 				serverThreadPool.interruptThreads();
 				serverThreadPool.purgeQueues();
 			}
