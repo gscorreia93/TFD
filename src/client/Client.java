@@ -18,10 +18,10 @@ public class Client {
 			Scanner s = new Scanner(System.in);
 
 			while (true) {
-				System.out.print("Insert command ('q' to exit): ");
+				System.out.println("Insert command ('q' to exit): ");
 				entry = s.nextLine();
-
-				if (entry != null && entry.equalsIgnoreCase("q"))
+					
+				if (entry.equalsIgnoreCase("q") || entry==null)
 					break;
 
 				c.request(clientID, entry);

@@ -78,11 +78,17 @@ public class ClientLibrary {
 		Response response;
 		try {
 			response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
+			//fez o pedido a um follower
+			if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false){
+				System.out.println("Lider: "+response.getLeaderID());
+			}
 			message = "success: " + response.isSuccessOrVoteGranted();
 			System.out.println(message);
 		} catch (RemoteException e) {
-			System.err.println("Failed to receive responde from server");
-			e.printStackTrace();
+			System.err.println("Failed to receive responde from server\nTrying another server...");
+			connectToServer(clientID);
+			
+			//e.printStackTrace();
 		}
 
 		return message;

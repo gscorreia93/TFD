@@ -91,11 +91,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 		
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
-
+			if(server.getState() != ServerState.LEADER){
+				response = new Response(-1,false);
+			}
+			else{
+				response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
+			}
 		// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
-
 			response = new LogReplication(server, raftServers.getServers()).commitLog(leaderCommit, eh.getTerm());
 
 
