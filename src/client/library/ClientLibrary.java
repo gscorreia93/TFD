@@ -1,25 +1,19 @@
 package client.library;
 
-import java.awt.List;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.rmi.AccessException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.UUID;
-import java.util.concurrent.ArrayBlockingQueue;
 
 import server.library.Entry;
 import server.library.RemoteMethods;
-import server.library.Request;
 import server.library.Response;
-import server.library.Server;
 
 public class ClientLibrary {
 
@@ -44,9 +38,9 @@ public class ClientLibrary {
 			serverData = server.split(":");
 			serverAddress = serverData[0];
 			port = Integer.parseInt(serverData[1]);
-			return registryToServer(clientID,serverAddress, port);
-			
+			return registryToServer(clientID,serverAddress, port);	
 		}
+	
 		return false;
 	}
 
