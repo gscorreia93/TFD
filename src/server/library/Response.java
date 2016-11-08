@@ -56,4 +56,11 @@ public class Response implements Serializable{
 	public void setLastLogIndex(int lastLogIndex) {
 		this.lastLogIndex = lastLogIndex;
 	}
+	
+	public String toString() {
+        return "leaderID: " + leaderID
+        		+ ", term: " + term
+        		+ ", successOrVoteGranted: " + successOrVoteGranted
+                + (successOrVoteGranted ? "" : ", denyCause: " + (denyCause == TERM_REJECTED ? "TERM_REJECTED" : "LOG_DEPRECATED"));
+    }
 }
