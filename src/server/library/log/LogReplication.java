@@ -10,16 +10,17 @@ import server.library.Request;
 import server.library.Response;
 import server.library.Server;
 import server.library.ServerHandler;
-import server.library.ServerState;
 
 public class LogReplication {
 
 	private Server server;
+	private LogHandler lh;
 	private List<Server> servers;
 
 	public LogReplication(Server server, List<Server> servers) {
 		this.server = server;
 		this.servers = servers;
+		lh = new LogHandler("LOG_" + server.getPort());
 	}
 
 	/**
@@ -30,75 +31,69 @@ public class LogReplication {
 	 * @return true when at least half the servers have written the logs.
 	 */
 	public synchronized Response leaderReplication(Entry[] entries, int term) {
-		if (server.getState() != ServerState.LEADER) {
-			// Sends the leader address back to the client
-
-		} else {
 System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() + "'");
-			LogHandler lh = LogHandler.INSTANCE;
 
-			// To store the servers that are valid to commit the entry
-			List<Server> commitServers = new ArrayList<>();
-			// To store the threads submitting the logs
-			List<LogSubmitThread> logSubmits = new ArrayList<>();
+		// To store the servers that are valid to commit the entry
+		List<Server> commitServers = new ArrayList<>();
+		// To store the threads submitting the logs
+		List<LogSubmitThread> logSubmits = new ArrayList<>();
 
-			LogEntry lastLog = lh.getLastLog();
-			int leaderCommit = lh.getLastCommitedLogIndex();
+		LogEntry lastLog = lh.getLastLog();
+		int leaderCommit = lh.getLastCommitedLogIndex();
 
-			// Used to commit this log latter
-			int currentIndex = lh.writeLogEntry(entries, term);
-
-
-			for (Server s : servers) {
-				// Replicate log to the other servers
-				LogSubmitThread l = new LogSubmitThread(s, term, server.getServerID(),
-						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit);
-
-				logSubmits.add(l);
-				// Orders the thread to submit the log to the remote server
-				l.run();
-			}
+		// Used to commit this log latter
+		int currentIndex = lh.writeLogEntry(entries, term);
 
 
-			int responsesCount = 0;
-			int quorum = (servers.size() / 2); // Only half the servers need to respond
+		for (Server s : servers) {
+			// Replicate log to the other servers
+			LogSubmitThread l = new LogSubmitThread(s, term, server.getServerID(),
+					lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit, lh);
 
-			while (responsesCount < quorum) {
-				for (int i = logSubmits.size() - 1; i >= 0; i--) {
-
-					if (logSubmits.get(i).isSubmitted()) {
-						commitServers.add(logSubmits.get(i).getServer());
-						// When the thread has ended it is removed from the queue
-						logSubmits.remove(i);
-					}
-				}
-
-				try {
-					// Waits to see again if there is a new result from a server
-					Thread.sleep(300);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-
-			} // eof while
+			logSubmits.add(l);
+			// Orders the thread to submit the log to the remote server
+			l.start();
+		}
 
 
+		int responsesCount = 0;
+		int quorum = (servers.size() / 2); // Only half the servers need to respond
 
-			// First commits in the leader
-			commitLog(currentIndex, term);
+		while (responsesCount < quorum) {
+			for (int i = logSubmits.size() - 1; i >= 0; i--) {
 
-			// Then sends request for all other servers to commit
-			for (Server s : commitServers) {
-				BlockingQueue<Request> bq = s.getRequestQueue();
-
-				if (bq.remainingCapacity() > 0) {
-					s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, server.getServerID(),
-							lastLog.getLogIndex(), lastLog.getLogTerm(), entries, currentIndex));
+				if (logSubmits.get(i).isSubmitted()) {
+					commitServers.add(logSubmits.get(i).getServer());
+					// When the thread has ended it is removed from the queue
+					logSubmits.remove(i);
+					responsesCount++;
 				}
 			}
-			// There's no need to wait for the commit results to reply to the client
 
-		} // eof if
+			try {
+				// Waits to see again if there is a new result from a server
+				Thread.sleep(300);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+
+		} // eof while
+
+
+
+		// First commits in the leader
+		commitLog(currentIndex, term);
+
+		// Then sends request for all other servers to commit
+		for (Server s : commitServers) {
+			BlockingQueue<Request> bq = s.getRequestQueue();
+
+			if (bq.remainingCapacity() > 0) {
+				s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, server.getServerID(),
+						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, currentIndex));
+			}
+		}
+		// There's no need to wait for the commit results to reply to the client
 
 		return new Response(term, true);
 	}
@@ -121,8 +116,6 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 	 */
 	public Response followerReplication(int term, int leaderId,
 			int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
-
-		LogHandler lh = LogHandler.INSTANCE;
 
 		Response response;
 
@@ -153,7 +146,7 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 	 * Only commits a log on the leaderCommit index, there are no validations.
 	 */
 	public Response commitLog(int leaderCommit, int thisTerm) {
-		String commitedLog = LogHandler.INSTANCE.commitLogEntry(leaderCommit);
+		String commitedLog = lh.commitLogEntry(leaderCommit);
 
 System.out.println("Commiting '" + commitedLog + "' on " + server.getPort() + " as a " + server.getState() + " at " + leaderCommit);
 

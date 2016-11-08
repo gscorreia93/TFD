@@ -22,11 +22,12 @@ public class LogSubmitThread extends Thread {
 	private int lastLogTerm;
 	private Entry[] entries;
 	private int leaderCommit;
+	private LogHandler lh;
 	
 	private boolean submitted = false;
 
 	public LogSubmitThread(Server s, int term, int serverId,
-			int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit) {
+			int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit, LogHandler lh) {
 
 		this.s = s;
 		this.term = term;
@@ -35,6 +36,7 @@ public class LogSubmitThread extends Thread {
 		this.lastLogTerm = lastLogTerm;
 		this.entries = entries;
 		this.leaderCommit = leaderCommit;
+		this.lh = lh;
 
 		BlockingQueue<Request> bq = s.getRequestQueue();
 
@@ -53,17 +55,22 @@ public class LogSubmitThread extends Thread {
 				Response response = s.getResponseQueue().poll();
 
 				if (response != null) {
+System.out.println(s.getPort() + ": " + response);
+
 					if (response.isSuccessOrVoteGranted()) {
 						submitted = true;
 
 					} else if (response.isLogDeprecated()) {
-						System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
+System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
+
+						entries = lh.getLogsSinceIndex(response.getLastLogIndex());
 
 						// Sends all the logs from the received last Index
 						s.getRequestQueue().add(new AppendEntriesRequest(term, serverId,
 								lastLogIndex, lastLogTerm, entries, leaderCommit));
 
 					} else if (response.isTermRejected()) {
+System.out.println(s.getPort() + " term rejected; current term " + response.getTerm());
 
 					}
 				}
@@ -78,7 +85,7 @@ public class LogSubmitThread extends Thread {
 
 		} // eof while
 		
-		System.out.println("Log submitted to server " + s.getPort());
+System.out.println("Log submitted to server " + s.getPort());
 	}
 
 	/**

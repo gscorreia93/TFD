@@ -1,17 +1,35 @@
 package server.library.log;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import server.library.Entry;
 
-public enum LogHandler {
-	INSTANCE;
+/**
+ * Class that handles the logs.
+ */
+public class LogHandler {
 
-	List<LogEntry> logs;
+	private File logFile;
+	private List<LogEntry> logs;
 
-	private LogHandler() {
+	public LogHandler(String filename) {
 		logs = new ArrayList<>();
+
+		try {
+			readFile(filename);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private void readFile(String filename) throws IOException {
+		logFile = new File(filename);
+		if (!logFile.exists()) {
+			logFile.createNewFile();
+		}
 	}
 
 	/**
@@ -25,7 +43,7 @@ public enum LogHandler {
 		}
 		return logs.size();
 	}
-	
+
 	/**
 	 * Commits a log entry
 	 */
@@ -68,6 +86,27 @@ public enum LogHandler {
 			return logs.get(logIndex);
 		}
 		return new LogEntry();
+	}
+
+	/**
+	 * Gets the logs since a given index to replicate
+	 * to follower servers that are not up to date.
+	 * @return
+	 */
+	public Entry[] getLogsSinceIndex(int logIndex) {
+		List<LogEntry> tempLogs = new ArrayList<>();
+
+		for (int i = 0; i < logs.size(); i++) {
+			if (i == logIndex) {
+				tempLogs.add(logs.get(i));
+			}
+		}
+
+		Entry[] logs2Return = new Entry[tempLogs.size()];
+		for (int i = 0; i < tempLogs.size(); i++) {
+			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
+		}
+		return logs2Return;
 	}
 
 	public int getLastCommitedLogIndex() {
