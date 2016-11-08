@@ -17,7 +17,7 @@ public class Client {
 			String entry = null;
 			Scanner s = new Scanner(System.in);
 
-			while (true) {
+			while (true) { 
 				System.out.println("Insert command ('q' to exit): ");
 				entry = s.nextLine();
 					

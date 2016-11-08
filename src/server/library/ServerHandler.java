@@ -91,7 +91,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 		
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			if(server.getState() != ServerState.LEADER){
+			if(server.getState() != ServerState.LEADER){ 
 				response = new Response(-1,false);
 			}
 			else{
