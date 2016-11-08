@@ -56,7 +56,7 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 				logSubmits.add(l);
 				// Orders the thread to submit the log to the remote server
-				l.run();
+				l.start();
 			}
 
 

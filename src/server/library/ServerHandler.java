@@ -34,7 +34,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			List<Server> servers = raftServers.getServers();
 			serverThreadPool = new ServerThreadPool(servers.size());
-			
+
 			serverThreadPool.startThreads(servers);
 
 			eh = new ElectionHandler(server, raftServers, serverThreadPool);
@@ -68,13 +68,20 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-		
+
 		if (term > eh.getTerm()) {
 
 			eh.setTerm(term);
 			eh.resetTimer();
 			eh.resetState();
 			eh.setVoted(true);
+
+			serverThreadPool.interruptThreads();
+			serverThreadPool.purgeQueues();
+
+//			if (!eh.isFollower()) {
+//				eh.setServerState(ServerState.FOLLOWER);
+//			}
 
 			return new Response(eh.getTerm(), true);
 
@@ -83,32 +90,32 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			return new Response(eh.getTerm(), true);
 		}
-		
+
 		return new Response(eh.getTerm(), false);
 	}
 
 	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
-		
+
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 			response = new LogReplication(server, raftServers.getServers()).leaderReplication(entries, eh.getTerm());
 
-		// Commits a log in all servers
+			// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
 
 			response = new LogReplication(server, raftServers.getServers()).commitLog(leaderCommit, eh.getTerm());
 
 
-		// When a follower receives a request to appendEntries
+			// When a follower receives a request to appendEntries
 		} else if (entries != null && server.getState() != ServerState.LEADER) {
 
 			response = new LogReplication(server, raftServers.getServers()).followerReplication(term,
 					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 
 
-		// When a heartbeat is received
+			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
-			
+
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
 
