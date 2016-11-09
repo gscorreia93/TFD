@@ -65,4 +65,22 @@ public class Server {
 if (!this.state.equals(newState)) System.out.println(port + "  New State = " + newState);
 		this.state = newState;
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Server other = (Server) obj;
+		if (serverID != other.serverID)
+			return false;
+		if (port != other.port)
+			return false;
+		if (!address.equals(address))
+			return false;
+		return true;
+	}
 }

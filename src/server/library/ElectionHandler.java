@@ -72,7 +72,7 @@ public class ElectionHandler {
 		sEs = Executors.newScheduledThreadPool(2);
 
 		// Time for election timeout
-		long time2Wait = new Random().nextInt(150) + 150;
+		long time2Wait = new Random().nextInt(650) + 250;
 		
 		Runnable runnable = new TimerTask() { // On election timeout
 			@Override

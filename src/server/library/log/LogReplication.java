@@ -46,6 +46,10 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 
 		for (Server s : servers) {
+			if (s.equals(server)) {
+				continue; // Doesn't need to create a thread to the leader
+			}
+
 			// Replicate log to the other servers
 			LogSubmitThread l = new LogSubmitThread(s, term, server.getServerID(),
 					lastLog.getLogIndex(), lastLog.getLogTerm(), entries, leaderCommit, lh);
