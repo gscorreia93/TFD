@@ -2,7 +2,7 @@ package server.library.log;
 
 public class LogEntry {
 
-	private final String SPLITTER = "|$|";
+	private final String SPLITTER = "_-_";
 
 	private int logIndex;
 	private int logTerm;
@@ -15,6 +15,15 @@ public class LogEntry {
 		this.logTerm = 0;
 	}
 	
+	public LogEntry(String logEntry) {
+		String[] logParts = logEntry.split(SPLITTER);
+		logIndex = Integer.parseInt(logParts[0]);
+		logTerm = Integer.parseInt(logParts[1]);
+		log = logParts[2];
+		clientID = logParts[3];
+		commited = logParts[4].equals("true");
+	}
+
 	public LogEntry(int logIndex, int logTerm, String log, String clientID) {
 		this.logIndex = logIndex;
 		this.logTerm = logTerm;
@@ -41,8 +50,12 @@ public class LogEntry {
 	public void setCommited(boolean commited) {
 		this.commited = commited;
 	}
-	
+
 	public String toString() {
-        return logIndex + SPLITTER + logTerm + SPLITTER + log + SPLITTER + clientID + SPLITTER + commited;
-    }
+		return logIndex + SPLITTER + logTerm + SPLITTER + log + SPLITTER + clientID + SPLITTER + commited;
+	}
+
+	public byte[] writeln() {
+		return (toString() + "\n").getBytes();
+	}
 }

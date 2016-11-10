@@ -1,12 +1,8 @@
 package server.library.log;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.RandomAccessFile;
 
 import server.library.Entry;
 
@@ -15,12 +11,9 @@ import server.library.Entry;
  */
 public class LogHandler {
 
-	private File logFile;
-	private List<LogEntry> logs;
+	private RandomAccessFile logFile;
 
 	public LogHandler(String filename) {
-		logs = new ArrayList<>();
-
 		try {
 			openFile(filename);
 		} catch (IOException e) {
@@ -29,10 +22,12 @@ public class LogHandler {
 	}
 
 	private void openFile(String filename) throws IOException {
-		logFile = new File(filename);
-		if (!logFile.exists()) {
-			logFile.createNewFile();
+		File tempFile = new File(filename);
+		if (!tempFile.exists()) {
+			tempFile.createNewFile();
 		}
+
+		logFile = new RandomAccessFile(tempFile, "rw");
 	}
 
 	/**
@@ -40,22 +35,17 @@ public class LogHandler {
 	 * @return the log entry index
 	 */
 	public int writeLogEntry(Entry[] entries, int logTerm) {
-		// Writes the log
-		for (Entry e : entries) {
-			logs.add(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry(), e.getClientID()));
-		}
-		
+		int currentLogIndex = 0;
 		try {
-			PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(logFile, true)));
-			for (Entry e : entries) {
-				out.println(new LogEntry(getCurrentLogIndex(), logTerm, e.getEntry(), e.getClientID()));
-			}
-		    out.close();
-		} catch (Exception e) {
-		   // do something
-		}
+			currentLogIndex = getCurrentLogIndex() - 1;
+			setPointerAtIndex(currentLogIndex);
 
-		return logs.size();
+			for (int i = 0; i < entries.length; i++) {
+				currentLogIndex++;
+				logFile.write(new LogEntry(currentLogIndex, logTerm, entries[0].getEntry(), entries[0].getClientID()).writeln());
+			}
+		} catch (IOException e) {}
+		return currentLogIndex;
 	}
 
 	/**
@@ -64,41 +54,63 @@ public class LogHandler {
 	public String commitLogEntry(int commitEntryIndex) {
 		String commitedLog = null;
 
-		if (logs.size() == commitEntryIndex) {
-			logs.get(commitEntryIndex - 1).setCommited(true);
-			commitedLog = logs.get(commitEntryIndex - 1).getLog();
+		try {
+			setPointerAtIndex(commitEntryIndex - 1);
+
+			LogEntry logEntry = new LogEntry(logFile.readLine());
+			logEntry.setCommited(true);
+
+			setPointerAtIndex(commitEntryIndex - 1);
+			logFile.write(logEntry.writeln());
+
+			commitedLog = logEntry.getLog();
+
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 		return commitedLog;
 	}
 
 	public boolean containsLogRecord(int logIndex, int logTerm) {
-		if (logs.isEmpty() && logIndex == 0)
-			return true;
+		//		if (logs.isEmpty() && logIndex == 0)
+		//			return true;
+		//
+		//		for (int i = logs.size() - 1; i >= 0; i--) {
+		//			if (logs.get(i).getLogIndex() == logIndex && logs.get(i).getLogTerm() == logTerm) {
+		//				return true;
+		//			}
+		//		}
 
-		for (int i = logs.size() - 1; i >= 0; i--) {
-			if (logs.get(i).getLogIndex() == logIndex && logs.get(i).getLogTerm() == logTerm) {
-				return true;
-			}
-		}
-
-		return false;
+		return true;
 	}
 
 	public void deleteConflitingLogs(int logIndex, int logTerm) {
-		if (logs.size() >= logIndex && logs.get(logIndex - 1).getLogTerm() != logTerm) {
-			logs.remove(logIndex - 1);
-			deleteConflitingLogs(logIndex - 1, logTerm);
-		}
+		//		if (logs.size() >= logIndex && logs.get(logIndex - 1).getLogTerm() != logTerm) {
+		//			logs.remove(logIndex - 1);
+		//			deleteConflitingLogs(logIndex - 1, logTerm);
+		//		}
 	}
 
 	public LogEntry getLastLog() {
-		return getLogAtIndex(logs.size() - 1);
+		String lastLog = null, pointerLog = null;
+
+		try {
+			logFile.seek(0);
+
+			pointerLog = logFile.readLine();
+			do { // Reads until it reaches the last line
+				lastLog = pointerLog;
+				pointerLog = logFile.readLine();
+			} while (pointerLog != null && !pointerLog.isEmpty());
+		} catch (IOException e) {}
+
+		return lastLog != null ? new LogEntry(lastLog) : new LogEntry();
 	}
 
 	public LogEntry getLogAtIndex(int logIndex) {
-		if (!logs.isEmpty()) {
-			return logs.get(logIndex);
-		}
+		//		if (!logs.isEmpty()) {
+		//			return logs.get(logIndex);
+		//		}
 		return new LogEntry();
 	}
 
@@ -108,31 +120,61 @@ public class LogHandler {
 	 * @return
 	 */
 	public Entry[] getLogsSinceIndex(int logIndex) {
-		List<LogEntry> tempLogs = new ArrayList<>();
-
-		for (int i = 0; i < logs.size(); i++) {
-			if (i == logIndex) {
-				tempLogs.add(logs.get(i));
-			}
-		}
-
-		Entry[] logs2Return = new Entry[tempLogs.size()];
-		for (int i = 0; i < tempLogs.size(); i++) {
-			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
-		}
-		return logs2Return;
+		//		List<LogEntry> tempLogs = new ArrayList<>();
+		//
+		//		for (int i = 0; i < logs.size(); i++) {
+		//			if (i == logIndex) {
+		//				tempLogs.add(logs.get(i));
+		//			}
+		//		}
+		//
+		//		Entry[] logs2Return = new Entry[tempLogs.size()];
+		//		for (int i = 0; i < tempLogs.size(); i++) {
+		//			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
+		//		}
+		//		return logs2Return;
+		return null;
 	}
 
 	public int getLastCommitedLogIndex() {
-		for (int i = logs.size() -1; i >= 0; i--) {
-			if (logs.get(i).isCommited()) {
-				return logs.get(i).getLogIndex();
-			}
-		}
+		//		for (int i = logs.size() -1; i >= 0; i--) {
+		//			if (logs.get(i).isCommited()) {
+		//				return logs.get(i).getLogIndex();
+		//			}
+		//		}
 		return 0;
 	}
 
-	private int getCurrentLogIndex() {
-		return logs.size();
+	private int getCurrentLogIndex() throws IOException {
+		// NOT RETURNING THE NUMBER OF FILLED LINES
+		// return (int) logFile.length();
+
+		// So a workaround is needed
+		logFile.seek(0);
+
+		int i = 0;
+		String pointerLog = logFile.readLine();
+
+		do { // Reads until it reaches the last line
+			i++;
+			pointerLog = logFile.readLine(); // Reads until it reaches the last line
+		} while (pointerLog != null && !pointerLog.isEmpty());
+
+		// When the file is empty the pointerLog is null
+		// But has made the same .readLine() as if had 1 line
+		return pointerLog == null ? i : i + 1;
+	}
+
+	private void setPointerAtIndex(int index) throws IOException {
+		// NOT WORKING HOW IT WAS SUPPOSED
+		// logFile.seek(commitEntryIndex - 1);
+
+		// So a workaround is needed
+		logFile.seek(0);
+
+		int i = 0;
+		for (i = 0; i < index; i++) { // Reads until it reaches the line we want
+			logFile.readLine();
+		}
 	}
 }
