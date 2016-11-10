@@ -54,7 +54,7 @@ public class ClientLibrary {
 		Response response=null;
 		
 		String[] serverData= null;
-	
+	 
 		boolean sendedToLeader = false;
 		
 		while(!sendedToLeader){
