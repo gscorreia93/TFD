@@ -51,26 +51,33 @@ public class ClientLibrary {
 
 		Entry[] entries = new Entry[]{new Entry(clientID,UUID.randomUUID().toString(),command)};
 
-		Response response;
+		Response response=null;
 		
 		String[] serverData= null;
 	
-		try {
-			response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
-			//fez o pedido a um follower
-			if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false){
-				System.out.println("Ups.. a Follower. Trying Leader");
-				serverData = servers.get(response.getLeaderID()-1).split(":");
-				registryToServer(clientID,serverData[0], Integer.parseInt(serverData[1]));
+		boolean sendedToLeader = false;
+		
+		while(!sendedToLeader){
+			try {
+				response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
+				//fez o pedido a um follower
+				if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false){
+					System.err.println("Follower :(    Trying Leader...");
+					serverData = servers.get(response.getLeaderID()-1).split(":");
+					registryToServer(clientID,serverData[0], Integer.parseInt(serverData[1]));
+					response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
+				}
+				sendedToLeader = true;
+			} catch (RemoteException e) {
+				//o servidor da ligação crashou
+				System.err.println("Failed to receive response from server\nTrying another server...");
+				connectToServer(clientID);
 			}
-			message = "success: " + response.isSuccessOrVoteGranted();
-			System.out.println(message);
-		} catch (RemoteException e) {
-			System.err.println("Failed to receive response from server\nTrying another server...");
-			connectToServer(clientID);
-
-			//e.printStackTrace();
 		}
+		
+		message = "success: " + response.isSuccessOrVoteGranted();
+		System.out.println(message);
+	
 
 		return message;
 	}
