@@ -132,7 +132,7 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 			// If an existing entry conflicts with a new one (same index but 
 			// different terms), delete the existing entry and all that follow it (§5.3)
-			lh.deleteConflitingLogs(prevLogIndex + 1, term);
+			lh.deleteConflitingLogs(prevLogIndex);
 
 			response = new Response(thisTerm, false);
 			response.setLogDeprecated();

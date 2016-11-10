@@ -3,6 +3,8 @@ package server.library.log;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 import server.library.Entry;
 
@@ -11,6 +13,7 @@ import server.library.Entry;
  */
 public class LogHandler {
 
+	private String filename;
 	private RandomAccessFile logFile;
 
 	public LogHandler(String filename) {
@@ -22,6 +25,8 @@ public class LogHandler {
 	}
 
 	private void openFile(String filename) throws IOException {
+		this.filename = filename;
+
 		File tempFile = new File(filename);
 		if (!tempFile.exists()) {
 			tempFile.createNewFile();
@@ -72,23 +77,25 @@ public class LogHandler {
 	}
 
 	public boolean containsLogRecord(int logIndex, int logTerm) {
-		//		if (logs.isEmpty() && logIndex == 0)
-		//			return true;
-		//
-		//		for (int i = logs.size() - 1; i >= 0; i--) {
-		//			if (logs.get(i).getLogIndex() == logIndex && logs.get(i).getLogTerm() == logTerm) {
-		//				return true;
-		//			}
-		//		}
+		try {
+			if (fileIsEmpty() && logIndex == 0)
+				return true;
 
-		return true;
-	}
+			logFile.seek(0);
 
-	public void deleteConflitingLogs(int logIndex, int logTerm) {
-		//		if (logs.size() >= logIndex && logs.get(logIndex - 1).getLogTerm() != logTerm) {
-		//			logs.remove(logIndex - 1);
-		//			deleteConflitingLogs(logIndex - 1, logTerm);
-		//		}
+			LogEntry logEntry;
+			String pointerLog = logFile.readLine();
+
+			while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
+				logEntry = new LogEntry(pointerLog);
+
+				if (logEntry.getLogIndex() == logIndex && logEntry.getLogTerm() == logTerm) {
+					return true;
+				}
+				pointerLog = logFile.readLine(); // Reads until it reaches the last line
+			}
+		} catch (IOException e) {}
+		return false;
 	}
 
 	public LogEntry getLastLog() {
@@ -107,48 +114,78 @@ public class LogHandler {
 		return lastLog != null ? new LogEntry(lastLog) : new LogEntry();
 	}
 
-	public LogEntry getLogAtIndex(int logIndex) {
-		//		if (!logs.isEmpty()) {
-		//			return logs.get(logIndex);
-		//		}
-		return new LogEntry();
+	/**
+	 * Deletes all logs from the logIndex, until the end of the file.
+	 */
+	public void deleteConflitingLogs(int logIndex) {
+		try {
+			int currentIndex = getCurrentLogIndex();
+
+			// Since we can't directly delete the lines from a file
+			// We need to create a new file with the lines to keep
+			// And then delete the old file
+
+			if (currentIndex >= logIndex) { // We check if there are lines to delete above our index
+				List<LogEntry> logs = getLogsSinceIndex(0);
+				List<LogEntry> logs2Keep = new ArrayList<>();
+
+				// First we get the lines to keep
+				for (int i = 1; i < logIndex; i++) {
+					logs2Keep.add(logs.get(i - 1));
+				}
+
+				if (!logs2Keep.isEmpty()) {
+					logFile.close(); // Then we close the current log file
+
+					// We create a temporary file to store the entries to keep
+					String tempFilename = filename + "_temp";
+					File tempFile = new File(tempFilename);
+					if (!tempFile.exists()) {
+						tempFile.createNewFile();
+					}
+
+					RandomAccessFile tempLogFile = new RandomAccessFile(tempFile, "rw");
+					// We store the entries to keep in the new file
+					for (int i = 0; i < logs2Keep.size(); i++) {
+						tempLogFile.write(logs2Keep.get(i).writeln());
+					}
+					tempLogFile.close();
+					
+					// And then we replace the old file with the new
+					tempFile.renameTo(new File(filename));
+				}
+			}
+		} catch (IOException e) {}
 	}
 
 	/**
 	 * Gets the logs since a given index to replicate
-	 * to follower servers that are not up to date.
-	 * @return
+	 * to follower servers that are not up to date in
+	 * the client's format.
 	 */
-	public Entry[] getLogsSinceIndex(int logIndex) {
-		//		List<LogEntry> tempLogs = new ArrayList<>();
-		//
-		//		for (int i = 0; i < logs.size(); i++) {
-		//			if (i == logIndex) {
-		//				tempLogs.add(logs.get(i));
-		//			}
-		//		}
-		//
-		//		Entry[] logs2Return = new Entry[tempLogs.size()];
-		//		for (int i = 0; i < tempLogs.size(); i++) {
-		//			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
-		//		}
-		//		return logs2Return;
-		return null;
+	public Entry[] getEntriesSinceIndex(int logIndex) {
+		List<LogEntry> tempLogs = getLogsSinceIndex(logIndex);
+
+		Entry[] logs2Return = new Entry[tempLogs.size()];
+		for (int i = 0; i < tempLogs.size(); i++) {
+			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
+		}
+		return logs2Return;
 	}
 
 	public int getLastCommitedLogIndex() {
-		//		for (int i = logs.size() -1; i >= 0; i--) {
-		//			if (logs.get(i).isCommited()) {
-		//				return logs.get(i).getLogIndex();
-		//			}
-		//		}
+		List<LogEntry> logs = getLogsSinceIndex(0);
+		for (int i = logs.size() -1; i >= 0; i--) {
+			if (logs.get(i).isCommited()) {
+				return logs.get(i).getLogIndex();
+			}
+		}
 		return 0;
 	}
 
 	private int getCurrentLogIndex() throws IOException {
 		// NOT RETURNING THE NUMBER OF FILLED LINES
 		// return (int) logFile.length();
-
 		// So a workaround is needed
 		logFile.seek(0);
 
@@ -168,13 +205,47 @@ public class LogHandler {
 	private void setPointerAtIndex(int index) throws IOException {
 		// NOT WORKING HOW IT WAS SUPPOSED
 		// logFile.seek(commitEntryIndex - 1);
+		// So a workaround is needed
+		logFile.seek(0);
 
+		for (int i = 0; i < index; i++) { // Reads until it reaches the line we want
+			logFile.readLine();
+		}
+	}
+
+	private boolean fileIsEmpty() throws IOException {
+		// NOT RETURNING THE NUMBER OF FILLED LINES
+		// return (int) logFile.length();
 		// So a workaround is needed
 		logFile.seek(0);
 
 		int i = 0;
-		for (i = 0; i < index; i++) { // Reads until it reaches the line we want
-			logFile.readLine();
+		String pointerLog = logFile.readLine();
+
+		while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
+			i++;
+			pointerLog = logFile.readLine(); // Reads until it reaches the last line
 		}
+		return i == 0;
+	}
+
+	/**
+	 * Gets the logs since a given index to replicate
+	 * to follower servers that are not up to date.
+	 * @return
+	 */
+	private List<LogEntry> getLogsSinceIndex(int logIndex) {
+		List<LogEntry> tempLogs = new ArrayList<>();
+		try {
+			setPointerAtIndex(logIndex);
+
+			String pointerLog = logFile.readLine();
+			do { // Reads until it reaches the last line
+				tempLogs.add(new LogEntry(pointerLog));
+				pointerLog = logFile.readLine();
+			} while (pointerLog != null && !pointerLog.isEmpty());
+
+		} catch (IOException e) {}
+		return tempLogs;
 	}
 }

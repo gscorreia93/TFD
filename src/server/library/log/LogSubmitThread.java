@@ -63,7 +63,7 @@ System.out.println(s.getPort() + ": " + response);
 					} else if (response.isLogDeprecated()) {
 System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
 
-						entries = lh.getLogsSinceIndex(response.getLastLogIndex());
+						entries = lh.getEntriesSinceIndex(response.getLastLogIndex());
 
 						// Sends all the logs from the received last Index
 						s.getRequestQueue().add(new AppendEntriesRequest(term, serverId,
