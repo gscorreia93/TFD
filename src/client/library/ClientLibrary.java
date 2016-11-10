@@ -10,7 +10,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
 import java.util.UUID;
- 
+  
 import server.library.Entry;
 import server.library.RemoteMethods;
 import server.library.Response;
