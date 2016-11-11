@@ -2,14 +2,10 @@ package server.library.log;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
 
-import server.library.AppendEntriesRequest;
 import server.library.Entry;
-import server.library.Request;
 import server.library.Response;
 import server.library.Server;
-import server.library.ServerHandler;
 
 public class LogReplication {
 
@@ -33,8 +29,6 @@ public class LogReplication {
 	public synchronized Response leaderReplication(Entry[] entries, int term) {
 System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() + "'");
 
-		// To store the servers that are valid to commit the entry
-		List<Server> commitServers = new ArrayList<>();
 		// To store the threads submitting the logs
 		List<LogSubmitThread> logSubmits = new ArrayList<>();
 
@@ -67,9 +61,6 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 			for (int i = logSubmits.size() - 1; i >= 0; i--) {
 
 				if (logSubmits.get(i).isSubmitted()) {
-					commitServers.add(logSubmits.get(i).getServer());
-					// When the thread has ended it is removed from the queue
-					logSubmits.remove(i);
 					responsesCount++;
 				}
 			}
@@ -77,25 +68,19 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 			try {
 				// Waits to see again if there is a new result from a server
 				Thread.sleep(300);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			} catch (InterruptedException e) {}
 
 		} // eof while
-
 
 
 		// First commits in the leader
 		commitLog(currentIndex, term);
 
-		// Then sends request for all other servers to commit
-		for (Server s : commitServers) {
-			BlockingQueue<Request> bq = s.getRequestQueue();
-
-			if (bq.remainingCapacity() > 0) {
-				s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, server.getServerID(),
-						lastLog.getLogIndex(), lastLog.getLogTerm(), entries, currentIndex));
-			}
+		// Then sends request for all other servers threads to commit
+		for (int i = logSubmits.size() - 1; i >= 0; i--) {
+			logSubmits.get(i).allowCommit(currentIndex);
+			// When the thread has ended it is removed from the queue
+			logSubmits.remove(i);
 		}
 		// There's no need to wait for the commit results to reply to the client
 
@@ -123,20 +108,19 @@ System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() 
 
 		Response response;
 
-		if (thisTerm < term) {
-			response = new Response(thisTerm, false);
-			response.setTermRejected();
-			return response;
-
-		} else if (!lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
+		if (thisTerm < term || !lh.containsLogRecord(prevLogIndex, prevLogTerm)) {
+			// TODO if (thisTerm < term) update term
 
 			// If an existing entry conflicts with a new one (same index but 
 			// different terms), delete the existing entry and all that follow it (§5.3)
 			lh.deleteConflitingLogs(prevLogIndex);
 
+			LogEntry lastLog = lh.getLastLog();
+
 			response = new Response(thisTerm, false);
 			response.setLogDeprecated();
-			response.setLastLogIndex(lh.getLastLog().getLogIndex());
+			response.setLastLogTerm(lastLog.getLogTerm());
+			response.setLastLogIndex(lastLog.getLogIndex());
 			return response;
 		}
 

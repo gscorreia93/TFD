@@ -100,11 +100,12 @@ public class ServerThreadPool {
 									typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
 
 							synchronized (response) {
+System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
 								voteQueue.add(response);
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("Connection failed, retrying...");
+							System.err.println("RequestVoteRequest: Connection failed, retrying...");
 							break;
 						}
 
@@ -125,7 +126,7 @@ public class ServerThreadPool {
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("Connection failed, retrying...");
+							System.err.println("AppendEntriesRequest: Connection failed, retrying...");
 							break;
 						}
 					}

@@ -7,6 +7,7 @@ import server.library.Entry;
 import server.library.Request;
 import server.library.Response;
 import server.library.Server;
+import server.library.ServerHandler;
 
 /**
  * Thread that submits a log to a remote server and
@@ -18,13 +19,15 @@ public class LogSubmitThread extends Thread {
 	private Server s;
 	private int term;
 	private int serverId;
-	private int lastLogIndex;
-	private int lastLogTerm;
 	private Entry[] entries;
 	private int leaderCommit;
 	private LogHandler lh;
 	
+	private int lastLogIndex;
+	private int lastLogTerm;
+	
 	private boolean submitted = false;
+	private volatile boolean allowCommit = false;
 
 	public LogSubmitThread(Server s, int term, int serverId,
 			int lastLogIndex, int lastLogTerm, Entry[] entries, int leaderCommit, LogHandler lh) {
@@ -32,11 +35,12 @@ public class LogSubmitThread extends Thread {
 		this.s = s;
 		this.term = term;
 		this.serverId = serverId;
-		this.lastLogIndex = lastLogIndex;
-		this.lastLogTerm = lastLogTerm;
 		this.entries = entries;
 		this.leaderCommit = leaderCommit;
 		this.lh = lh;
+		
+		this.lastLogIndex = lastLogIndex;
+		this.lastLogTerm = lastLogTerm;
 
 		BlockingQueue<Request> bq = s.getRequestQueue();
 
@@ -55,23 +59,16 @@ public class LogSubmitThread extends Thread {
 				Response response = s.getResponseQueue().poll();
 
 				if (response != null) {
-System.out.println(s.getPort() + ": " + response);
 
 					if (response.isSuccessOrVoteGranted()) {
 						submitted = true;
 
 					} else if (response.isLogDeprecated()) {
-System.out.println(s.getPort() + " deprecated; last index " + response.getLastLogIndex());
-
 						entries = lh.getEntriesSinceIndex(response.getLastLogIndex());
 
 						// Sends all the logs from the received last Index
 						s.getRequestQueue().add(new AppendEntriesRequest(term, serverId,
-								lastLogIndex, lastLogTerm, entries, leaderCommit));
-
-					} else if (response.isTermRejected()) {
-System.out.println(s.getPort() + " term rejected; current term " + response.getTerm());
-
+								response.getLastLogIndex(), response.getLastLogTerm(), entries, leaderCommit));
 					}
 				}
 			}
@@ -79,13 +76,25 @@ System.out.println(s.getPort() + " term rejected; current term " + response.getT
 			try {
 				// Waits to see again if there is a new result from the server
 				Thread.sleep(300);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-
+			} catch (InterruptedException e) {}
 		} // eof while
-		
 System.out.println("Log submitted to server " + s.getPort());
+
+		do {
+			// Nothing while it can't commit
+			try {
+				// Waits to see again if it is allowed to commit
+				Thread.sleep(300);
+			} catch (InterruptedException e) {}
+		} while (!allowCommit);
+
+		// When the
+		BlockingQueue<Request> bq = s.getRequestQueue();
+
+		if (bq.remainingCapacity() > 0) {
+			s.getRequestQueue().add(new AppendEntriesRequest(ServerHandler.COMMIT_LOG, serverId,
+					lastLogIndex, lastLogTerm, entries, leaderCommit));
+		}
 	}
 
 	/**
@@ -95,6 +104,15 @@ System.out.println("Log submitted to server " + s.getPort());
 	 */
 	public boolean isSubmitted() {
 		return submitted;
+	}
+
+	/**
+	 * Tells the thread that it can commit the log
+	 * and receives the index to commit
+	 */
+	public void allowCommit(int leaderCommit) {
+		this.leaderCommit = leaderCommit;
+		this.allowCommit = true;
 	}
 
 	public Server getServer() {

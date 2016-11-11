@@ -9,11 +9,28 @@ public class Entry implements Serializable {
 	private String entry;
 	private String clientID;
 	private String requestID;
+	private int term;
+	private boolean commited;
 
 	public Entry(String clientID, String requestID, String entry) {
 		this.entry = entry;
 		this.clientID = clientID;
 		this.requestID = requestID;
+
+		this.term = 0;
+		this.commited = false;
+	}
+
+	public Entry(String clientID, String requestID, String entry, int term, boolean commited) {
+		this.entry = entry;
+		this.clientID = clientID;
+		this.requestID = requestID;
+		this.term = term;
+		this.commited = commited;
+	}
+
+	public boolean isCommited() {
+		return commited;
 	}
 
 	public String getEntry() {
@@ -26,6 +43,10 @@ public class Entry implements Serializable {
 
 	public String getRequestID() {
 		return requestID;
+	}
+
+	public int getTerm() {
+		return term;
 	}
 
 	@Override

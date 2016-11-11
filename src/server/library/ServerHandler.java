@@ -20,13 +20,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 	private LogHandler lh;
 	private RAFTServers raftServers;
-	
+
 	private Server server;
 	private ElectionHandler eh;
 	private ServerThreadPool serverThreadPool;
-	
+
 	private int leaderID;
-	
+
 	public ServerHandler() throws RemoteException {
 		super();
 
@@ -40,7 +40,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			List<Server> servers = raftServers.getServers();
 			serverThreadPool = new ServerThreadPool(servers.size());
-			
+
 			serverThreadPool.startThreads(servers);
 
 			eh = new ElectionHandler(server, raftServers, serverThreadPool);
@@ -78,67 +78,72 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-		
-		if (term > eh.getTerm()) {
+System.out.println("\tServer " + candidateID + " request on term " + term + " (current " + eh.getTerm() + ")");
 
+		Response response = new Response(eh.getTerm(), false);
+
+		if (term > eh.getTerm()) {
 			eh.setTerm(term);
-			eh.resetTimer();
 			eh.resetState();
 			eh.setVoted(true);
 
 			serverThreadPool.interruptThreads();
 			serverThreadPool.purgeQueues();
 
-//			if (!eh.isFollower()) {
-//				eh.setServerState(ServerState.FOLLOWER);
-//			}
+			if (!eh.isFollower() && candidateID != server.getServerID()) {
+System.out.println("SOU FOLLOWER!!! no term " + term + "  e voto no " + candidateID);
+				eh.setServerState(ServerState.FOLLOWER);
+			}
 
-			return new Response(eh.getTerm(), true);
+			response = new Response(eh.getTerm(), true);
 
-		} else if(server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
+		} else if (server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
 			eh.setVoted(true);
 
-			return new Response(eh.getTerm(), true);
+			response = new Response(eh.getTerm(), true);
 		}
 		
-		return new Response(eh.getTerm(), false);
+		// A server can vote only once for a term
+		if (eh.hasVotedForTerm(term)) {
+			response = new Response(eh.getTerm(), false);
+		}
+		return response;
 	}
 
 	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			if(server.getState() != ServerState.LEADER){ 
-				System.out.println("Client contact me. Redirect to Leader ("+leaderID+")" );
-				response = new Response(-1,false);
+			if(server.getState() != ServerState.LEADER) {
+				System.out.println("Redirecting to Leader (" + leaderID + ")" );
+				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
-			}
-			else{
+			} else {
 				response = new LogReplication(server, raftServers.getServers(), lh).leaderReplication(entries, eh.getTerm());
 			}
-		// Commits a log in all servers
+
+			// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
 			response = new LogReplication(server, raftServers.getServers(), lh).commitLog(leaderCommit, eh.getTerm());
 
 
-		// When a follower receives a request to appendEntries
+			// When a follower receives a request to appendEntries
 		} else if (entries != null && server.getState() != ServerState.LEADER) {
 
 			response = new LogReplication(server, raftServers.getServers(), lh).followerReplication(term,
-					leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
+					leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
 
 
-		// When a heartbeat is received
+			// When a heartbeat is received
 		} else if (entries == null && server.getState() != ServerState.LEADER) {
 			leaderID = leaderId;
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-	
+
 				serverThreadPool.interruptThreads();
 				serverThreadPool.purgeQueues();
 			}
 
-			eh.resetTimer();
 			eh.resetState();
 		}
 

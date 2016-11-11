@@ -42,12 +42,15 @@ public class LogHandler {
 	public int writeLogEntry(Entry[] entries, int logTerm) {
 		int currentLogIndex = 0;
 		try {
-			currentLogIndex = getCurrentLogIndex() - 1;
+			currentLogIndex = getCurrentLogIndex();
 			setPointerAtIndex(currentLogIndex);
 
 			for (int i = 0; i < entries.length; i++) {
 				currentLogIndex++;
-				logFile.write(new LogEntry(currentLogIndex, logTerm, entries[0].getEntry(), entries[0].getClientID()).writeln());
+				// When the write entry comes from the client it doesn't bring the term
+				int term = entries[i].getTerm() > 0 ? entries[0].getTerm() : logTerm;
+
+				logFile.write(new LogEntry(currentLogIndex, term, entries[i].getEntry(), entries[i].getClientID()).writeln());
 			}
 		} catch (IOException e) {}
 		return currentLogIndex;
@@ -168,7 +171,8 @@ public class LogHandler {
 
 		Entry[] logs2Return = new Entry[tempLogs.size()];
 		for (int i = 0; i < tempLogs.size(); i++) {
-			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null, tempLogs.get(i).getLog());
+			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null,
+					tempLogs.get(i).getLog(), tempLogs.get(i).getLogTerm(), tempLogs.get(i).isCommited());
 		}
 		return logs2Return;
 	}
@@ -192,14 +196,14 @@ public class LogHandler {
 		int i = 0;
 		String pointerLog = logFile.readLine();
 
-		do { // Reads until it reaches the last line
+		while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
 			i++;
 			pointerLog = logFile.readLine(); // Reads until it reaches the last line
-		} while (pointerLog != null && !pointerLog.isEmpty());
+		}
 
 		// When the file is empty the pointerLog is null
 		// But has made the same .readLine() as if had 1 line
-		return pointerLog == null ? i : i + 1;
+		return i;
 	}
 
 	private void setPointerAtIndex(int index) throws IOException {
@@ -240,10 +244,10 @@ public class LogHandler {
 			setPointerAtIndex(logIndex);
 
 			String pointerLog = logFile.readLine();
-			do { // Reads until it reaches the last line
+			while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
 				tempLogs.add(new LogEntry(pointerLog));
 				pointerLog = logFile.readLine();
-			} while (pointerLog != null && !pointerLog.isEmpty());
+			}
 
 		} catch (IOException e) {}
 		return tempLogs;

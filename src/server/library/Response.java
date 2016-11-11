@@ -6,12 +6,12 @@ public class Response implements Serializable{
 
 	private static final long serialVersionUID = 1L;
 
-	private final int TERM_REJECTED = 1;
-	private final int LOG_DEPRECATED = 2;
+	private final int LOG_DEPRECATED = 1;
 
 	private int term;
 	private int leaderID;
 	private int denyCause;
+	private int lastLogTerm;
 	private int lastLogIndex;
 	private boolean successOrVoteGranted;
 
@@ -27,20 +27,13 @@ public class Response implements Serializable{
 	public boolean isSuccessOrVoteGranted() {
 		return successOrVoteGranted;
 	}
-		
+
 	public void setLeaderID (int leaderId){
 		leaderID = leaderId;
 	}
-	
+
 	public int getLeaderID(){
 		return leaderID;
-	}
-	
-	public boolean isTermRejected() {
-		return denyCause == TERM_REJECTED;
-	}
-	public void setTermRejected() {
-		denyCause = TERM_REJECTED;
 	}
 
 	public boolean isLogDeprecated() {
@@ -50,17 +43,24 @@ public class Response implements Serializable{
 		denyCause = LOG_DEPRECATED;
 	}
 
+	public int getLastLogTerm() {
+		return lastLogTerm;
+	}
+	public void setLastLogTerm(int lastLogTerm) {
+		this.lastLogTerm = lastLogTerm;
+	}
+
 	public int getLastLogIndex() {
 		return lastLogIndex;
 	}
 	public void setLastLogIndex(int lastLogIndex) {
 		this.lastLogIndex = lastLogIndex;
 	}
-	
+
 	public String toString() {
-        return "leaderID: " + leaderID
-        		+ ", term: " + term
-        		+ ", successOrVoteGranted: " + successOrVoteGranted
-                + (successOrVoteGranted ? "" : ", denyCause: " + (denyCause == TERM_REJECTED ? "TERM_REJECTED" : "LOG_DEPRECATED"));
-    }
+		return "leaderID: " + leaderID
+				+ ", term: " + term
+				+ ", successOrVoteGranted: " + successOrVoteGranted
+				+ (successOrVoteGranted ? "" : ", denyCause: " + (denyCause == LOG_DEPRECATED ? "LOG_DEPRECATED" : "?"));
+	}
 }
