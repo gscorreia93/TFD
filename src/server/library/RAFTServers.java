@@ -43,9 +43,7 @@ public class RAFTServers {
 				serverAddress = serverData[0];
 				port = Integer.parseInt(serverData[1]);
 				numberOfServer++;			
-				if (serverAddress.equals(InetAddress.getLocalHost().getHostAddress()) || serverAddress.equals("localhost") || serverAddress.equals("127.0.0.1")){
-					servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
-				}
+				servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
 			}
 			
 			br.close();

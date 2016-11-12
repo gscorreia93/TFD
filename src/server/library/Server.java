@@ -62,6 +62,7 @@ public class Server {
 	}
 
 	public void setState(ServerState newState){
+		System.out.println(address+":"+port+" is now "+newState);
 		this.state = newState;
 	}
 	

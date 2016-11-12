@@ -76,7 +76,7 @@ public class ServerThreadPool {
 
 			while (true) {
 				try { // Tries to connect to a server
-					registry = LocateRegistry.getRegistry(server.getPort());
+					registry = LocateRegistry.getRegistry(server.getAddress(),server.getPort());
 					stub = (RemoteMethods) registry.lookup("ServerHandler");
 					break;
 				} catch (Exception e) {
@@ -100,12 +100,12 @@ public class ServerThreadPool {
 									typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
 
 							synchronized (response) {
-System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
+						//		System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
 								voteQueue.add(response);
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("RequestVoteRequest: Connection failed, retrying...");
+							System.err.println("RequestVoteRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
 							break;
 						}
 
@@ -126,7 +126,7 @@ System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVo
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("AppendEntriesRequest: Connection failed, retrying...");
+							System.err.println("AppendEntriesRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
 							break;
 						}
 					}

@@ -27,7 +27,7 @@ public class Client {
 				c.request(clientID, entry);
 			}
 
-			System.out.println("Client terminated");
+			System.out.println(clientID+" terminated");
 
 			s.close();
 		}

@@ -105,10 +105,10 @@ public class ClientLibrary {
 		try {
 			Registry registry = LocateRegistry.getRegistry(address,port);
 			stub = (RemoteMethods) registry.lookup("ServerHandler");
-			System.out.println("I'm "+clientID+" --- Connected to "+address+"["+port+"]");
+			System.out.println("I'm "+clientID+" --- Connected to "+address+":"+port);
 			return true;
 		} catch (RemoteException e) {
-			System.err.println("Failed to connect to "+address+"["+port+"]");
+			System.err.println("Failed to connect to "+address+":"+port);
 		} catch (NotBoundException e) {
 			e.printStackTrace();
 		}

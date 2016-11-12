@@ -50,7 +50,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			lh = new LogHandler("LOG_" + server.getPort());
 
 		} else {
-			System.out.println("Incorrect server configuration, server not starting");
+			System.err.println("Incorrect server configuration, server not starting");
 			System.exit(-1);
 		}
 	}
@@ -65,7 +65,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				Registry registry = LocateRegistry.createRegistry(server.getPort());
 				registry.bind("ServerHandler", this);
 
-				System.out.println(server.getAddress() + "[" + server.getPort() + "] started!");
+				System.out.println(server.getAddress()+":"+server.getPort()+" started!");
 				return server;
 
 			} catch (RemoteException e) {
@@ -78,7 +78,8 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-System.out.println("\tServer " + candidateID + " request on term " + term + " (current " + eh.getTerm() + ")");
+
+		//System.out.println("\tServer " + candidateID + " request on term " + term + " (current " + eh.getTerm() + ")");
 
 		Response response = new Response(eh.getTerm(), false);
 
@@ -91,7 +92,7 @@ System.out.println("\tServer " + candidateID + " request on term " + term + " (c
 			serverThreadPool.purgeQueues();
 
 			if (!eh.isFollower() && candidateID != server.getServerID()) {
-System.out.println("SOU FOLLOWER!!! no term " + term + "  e voto no " + candidateID);
+			//	System.out.println("SOU FOLLOWER!!! no term " + term + "  e voto no " + candidateID);
 				eh.setServerState(ServerState.FOLLOWER);
 			}
 
@@ -115,7 +116,7 @@ System.out.println("SOU FOLLOWER!!! no term " + term + "  e voto no " + candidat
 
 		if (term == CLIENT_REQUEST) { // If it is a Client Request
 			if(server.getState() != ServerState.LEADER) {
-				System.out.println("Redirecting to Leader (" + leaderID + ")" );
+				System.err.println("Redirecting to Leader (" + leaderID + ")" );
 				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
 			} else {

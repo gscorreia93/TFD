@@ -48,7 +48,7 @@ public class ElectionHandler {
 		sEs = Executors.newScheduledThreadPool(2);
 
 		// Time for election timeout
-		long time2Wait = new Random().nextInt(400) + 250;
+		long time2Wait = new Random().nextInt(150) + 150;
 
 		Runnable runnable = new TimerTask() { // On election timeout
 			@Override
@@ -61,7 +61,7 @@ public class ElectionHandler {
 						List<Server> servers = raftServers.getServers();
 						serverThreadPool.startThreads(servers);
 							
-System.out.println("starting election");
+						System.out.println("Starting election...");
 						startElection();
 					}
 
@@ -117,7 +117,7 @@ System.out.println("starting election");
 				}
 
 				if (response != null && term < response.getTerm()) {
-System.out.println("Rejeitado " + term + " < " + response.getTerm());
+					//System.out.println("Rejeitado " + term + " < " + response.getTerm());
 					candidateServer.setState(ServerState.FOLLOWER);
 					break;
 				}
@@ -127,13 +127,11 @@ System.out.println("Rejeitado " + term + " < " + response.getTerm());
 		if (voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
-System.out.println("SOU LIDER!!! no term " + term + " com " + voteCount + " votos");
+			System.out.println("LEADER!\tTerm:["+term+"] VoteCount:["+voteCount+"]");
 
 			Runnable runnable = new TimerTask() { // heartbeat
 				@Override
 				public void run() {
-
-					//System.out.println("Beep!");
 
 					List<Server> servers = raftServers.getServers();
 
