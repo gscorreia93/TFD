@@ -1,5 +1,7 @@
 package server.library;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -62,24 +64,24 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 		for (Server server : servers) {
 			try {
-				Registry registry = LocateRegistry.createRegistry(server.getPort());
-				registry.bind("ServerHandler", this);
-
-				System.out.println(server.getAddress()+":"+server.getPort()+" started!");
-				return server;
-
+				if (server.getAddress().equals(InetAddress.getLocalHost().getHostAddress()) || server.getAddress().equals("localhost") || server.getAddress().equals("127.0.0.1")){
+					Registry registry = LocateRegistry.createRegistry(server.getPort());
+					registry.bind("ServerHandler", this);
+					System.out.println(server.getAddress()+":"+server.getPort()+" started!");
+					return server;
+				}
 			} catch (RemoteException e) {
 				System.err.println(server.getPort() + " already bounded, trying another port.");
 			} catch (AlreadyBoundException e) {
 				System.err.println(server.getPort() + " already bounded, trying another port.");
+			} catch (UnknownHostException e) {
+				e.printStackTrace();
 			}
 		}
 		throw new ServerNotFoundException();
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-
-		//System.out.println("\tServer " + candidateID + " request on term " + term + " (current " + eh.getTerm() + ")");
 
 		Response response = new Response(eh.getTerm(), false);
 
@@ -92,20 +94,21 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			serverThreadPool.purgeQueues();
 
 			if (!eh.isFollower() && candidateID != server.getServerID()) {
-			//	System.out.println("SOU FOLLOWER!!! no term " + term + "  e voto no " + candidateID);
+				
 				eh.setServerState(ServerState.FOLLOWER);
 			}
-
+			System.out.println("No term " + term + "  e voto no " + candidateID);
 			response = new Response(eh.getTerm(), true);
 
 		} else if (server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
 			eh.setVoted(true);
-
+			System.out.println("No term " + term + "  e voto no " + candidateID);
 			response = new Response(eh.getTerm(), true);
 		}
-		
+
 		// A server can vote only once for a term
 		if (eh.hasVotedForTerm(term)) {
+			System.out.println("No term " + term + "  e nao voto no " + candidateID);
 			response = new Response(eh.getTerm(), false);
 		}
 		return response;
@@ -140,7 +143,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			leaderID = leaderId;
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-
+				System.out.println("O LIDER EH O SERVER "+leaderID);
 				serverThreadPool.interruptThreads();
 				serverThreadPool.purgeQueues();
 			}

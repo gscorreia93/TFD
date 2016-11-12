@@ -42,11 +42,12 @@ public class ElectionHandler {
 	}
 
 	protected void resetState() {
-		if (sEs != null) {
+		if(sEs != null){
 			sEs.shutdownNow();
 		}
+		
 		sEs = Executors.newScheduledThreadPool(2);
-
+		
 		// Time for election timeout
 		long time2Wait = new Random().nextInt(150) + 150;
 
@@ -106,18 +107,16 @@ public class ElectionHandler {
 		}
 
 		// Waits for the response
-		while (totalVoteCount < quorum && (voteCount < quorum)) {
-
+		while (totalVoteCount < quorum && (voteCount < quorum) && candidateServer.getState() == ServerState.CANDIDATE) {
 			if (!voteQueue.isEmpty()) {
 				Response response = voteQueue.poll();
 				totalVoteCount++;
-
+				
 				if (response != null && response.isSuccessOrVoteGranted() && response.getTerm() == term) {
 					voteCount++;
 				}
 
 				if (response != null && term < response.getTerm()) {
-					//System.out.println("Rejeitado " + term + " < " + response.getTerm());
 					candidateServer.setState(ServerState.FOLLOWER);
 					break;
 				}

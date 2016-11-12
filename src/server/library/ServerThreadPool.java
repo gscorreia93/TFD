@@ -26,7 +26,6 @@ public class ServerThreadPool {
 	}
 
 	protected void interruptThreads() {
-
 		for (int i = 0; i < threadPool.length; i++) {
 			if (threadPool[i] != null) {
 				threadPool[i].interrupt();

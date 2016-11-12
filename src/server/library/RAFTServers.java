@@ -42,7 +42,7 @@ public class RAFTServers {
 				serverData = serverAddress.split(":");
 				serverAddress = serverData[0];
 				port = Integer.parseInt(serverData[1]);
-				numberOfServer++;			
+				numberOfServer++;	
 				servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
 			}
 			
