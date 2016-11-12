@@ -72,20 +72,22 @@ public class ServerThreadPool {
 		public void run() {
 			Registry registry;
 			RemoteMethods stub;
-
-			while (true) {
-				try { // Tries to connect to a server
-					registry = LocateRegistry.getRegistry(server.getAddress(),server.getPort());
-					stub = (RemoteMethods) registry.lookup("ServerHandler");
-					break;
-				} catch (Exception e) {
-				}
-			}
-
-			Request rq = null;
-
+			
 			while (!interrupted) { // Keeps checking the requestQueue to see if
-									// there are more requests
+				// there are more requests
+
+				while (true) {
+					try { // Tries to connect to a server
+						registry = LocateRegistry.getRegistry(server.getAddress(),server.getPort());
+						stub = (RemoteMethods) registry.lookup("ServerHandler");
+						break;
+					} catch (Exception e) {
+					}
+				}
+
+				Request rq = null;
+
+
 				try {
 					if (rq == null)
 						rq = requestQueue.take();
@@ -99,7 +101,7 @@ public class ServerThreadPool {
 									typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
 
 							synchronized (response) {
-						//		System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
+								//		System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
 								voteQueue.add(response);
 							}
 

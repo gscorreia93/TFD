@@ -97,18 +97,15 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				
 				eh.setServerState(ServerState.FOLLOWER);
 			}
-			System.out.println("No term " + term + "  e voto no " + candidateID);
 			response = new Response(eh.getTerm(), true);
 
 		} else if (server.getState() == ServerState.CANDIDATE && (candidateID == server.getServerID())) {
 			eh.setVoted(true);
-			System.out.println("No term " + term + "  e voto no " + candidateID);
 			response = new Response(eh.getTerm(), true);
 		}
 
 		// A server can vote only once for a term
 		if (eh.hasVotedForTerm(term)) {
-			System.out.println("No term " + term + "  e nao voto no " + candidateID);
 			response = new Response(eh.getTerm(), false);
 		}
 		return response;
@@ -143,7 +140,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			leaderID = leaderId;
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
-				System.out.println("O LIDER EH O SERVER "+leaderID);
 				serverThreadPool.interruptThreads();
 				serverThreadPool.purgeQueues();
 			}
