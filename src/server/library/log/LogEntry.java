@@ -1,12 +1,14 @@
 package server.library.log;
 
+import server.library.Entry;
+
 public class LogEntry {
 
-	private final String SPLITTER = "_-_";
+	private final String SPLITTER = "|";
 
 	private int logIndex;
 	private int logTerm;
-	private String log;
+	private String command;
 	private String clientID;
 	private boolean commited = false;
 
@@ -16,29 +18,33 @@ public class LogEntry {
 	}
 	
 	public LogEntry(String logEntry) {
-		String[] logParts = logEntry.split(SPLITTER);
+		String[] logParts = logEntry.split("\\"+SPLITTER);
 		logIndex = Integer.parseInt(logParts[0]);
 		logTerm = Integer.parseInt(logParts[1]);
-		log = logParts[2];
+		command = logParts[2];
 		clientID = logParts[3];
-		commited = logParts[4].equals("true");
+		commited = Boolean.valueOf(logParts[4].trim());
 	}
 
-	public LogEntry(int logIndex, int logTerm, String log, String clientID) {
+	public LogEntry(int logIndex, int logTerm, String command, String clientID) {
 		this.logIndex = logIndex;
 		this.logTerm = logTerm;
-		this.log = log;
+		this.command = command;
 		this.clientID = clientID;
 	}
 
 	public int getLogIndex() {
 		return logIndex;
 	}
+	
+	public String getDelimiter(){
+		return SPLITTER;
+	}
 	public int getLogTerm() {
 		return logTerm;
 	}
-	public String getLog() {
-		return log;
+	public String getCommand() {
+		return command;
 	}
 	public String getClientID() {
 		return clientID;
@@ -52,10 +58,17 @@ public class LogEntry {
 	}
 
 	public String toString() {
-		return logIndex + SPLITTER + logTerm + SPLITTER + log + SPLITTER + clientID + SPLITTER + commited;
+		return logIndex + SPLITTER + logTerm + SPLITTER + command + SPLITTER + clientID + SPLITTER + commited;
+	}
+	
+	public Entry convertToEntry(){
+		Entry converted = new Entry(clientID, null, command);
+		converted.setTerm(logTerm);
+		converted.setCommited(commited);
+		return converted;
 	}
 
-	public byte[] writeln() {
-		return (toString() + "\n").getBytes();
-	}
+//	public byte[] writeln() {
+//		return (toString() + "\n").getBytes();
+//	}
 }

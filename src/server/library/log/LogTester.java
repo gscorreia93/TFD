@@ -1,25 +1,27 @@
 package server.library.log;
 
-import java.util.UUID;
-
-import server.library.Entry;
+import java.io.IOException;
 
 /**
  * Only to test LogHandler without starting the servers and the clients
  */
 public class LogTester {
 
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		Entry[] entries = new Entry[]{new Entry(UUID.randomUUID().toString(),"asd","asd")};
+	public static void main(String[] args) throws IOException {
 		
-		new LogHandler("LOG_8081").writeLogEntry(entries, 1);
+//		LogHandler logHandler = new LogHandler("EXEMPLO");
+//		System.out.println("Empty? "+ logHandler.isLogEmpty());
+//		System.out.println("n linhas: "+logHandler.getCurrentLogIndex());
+//		System.out.println("Linha 8 committed? "+logHandler.commitLogEntry(8));
+//		System.out.println("Tem entry 2,1 ? " +logHandler.hasEntry(2, 1));
+//		System.out.println("->"+logHandler.getLastLogEntry().toString());
+//		logHandler.removeEntrysAfterIndex(5);
+
+		//		List<Entry> recoverEntries = logHandler.getAllEntriesAfterIndex(6);
+//		for (Entry entry : recoverEntries) {
+//			System.out.println(entry.toString());
+//		}
 		
-		new LogHandler("LOG_8082").writeLogEntry(entries, 1);
-		
-//		Entry[] logs = new LogHandler("LOG_8081").getEntriesSinceIndex(3);
-//		for (Entry e : logs)
-//			System.out.println(e.getEntry());
 	}
 
 }

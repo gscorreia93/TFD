@@ -1,9 +1,10 @@
 package server.library.log;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import server.library.Entry;
@@ -13,243 +14,233 @@ import server.library.Entry;
  */
 public class LogHandler {
 
-	private String filename;
 	private RandomAccessFile logFile;
+	private File fileLog;
 
 	public LogHandler(String filename) {
+
+		fileLog = new File(filename);
+		if (!fileLog.exists()){
+			try {
+				fileLog.createNewFile();
+			} catch (IOException e) {
+				System.out.println("cannot create log file");
+				e.printStackTrace();
+			}
+		}
+		else{
+			System.out.println("LogFile already exist");
+		}
 		try {
-			openFile(filename);
-		} catch (IOException e) {
+			logFile = new RandomAccessFile(fileLog, "rw");
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 	}
 
-	private void openFile(String filename) throws IOException {
-		this.filename = filename;
-
-		File tempFile = new File(filename);
-		if (!tempFile.exists()) {
-			tempFile.createNewFile();
+	/**
+	 * Writes all log entries received
+	 * @return the log entry index
+	 * @throws IOException 
+	 */
+	public void writeLogEntries(Entry[] entries, int logTerm) throws IOException{
+		for(int i=0; i<entries.length;i++){
+			writeLogEntry(entries[i],logTerm);
 		}
-
-		logFile = new RandomAccessFile(tempFile, "rw");
 	}
 
 	/**
-	 * Writes a log entry
-	 * @return the log entry index
+	 * Append the entry to end of log file 
+	 * @param entry
+	 * @param logTerm
+	 * @throws IOException
 	 */
-	public int writeLogEntry(Entry[] entries, int logTerm) {
-		int currentLogIndex = 0;
-		try {
-			currentLogIndex = getCurrentLogIndex();
-			setPointerAtIndex(currentLogIndex);
+	private void writeLogEntry(Entry entry, int logTerm) throws IOException {
 
-			for (int i = 0; i < entries.length; i++) {
-				currentLogIndex++;
-				// When the write entry comes from the client it doesn't bring the term
-				int term = entries[i].getTerm() > 0 ? entries[0].getTerm() : logTerm;
-
-				logFile.write(new LogEntry(currentLogIndex, term, entries[i].getEntry(), entries[i].getClientID()).writeln());
-			}
-		} catch (IOException e) {}
-		return currentLogIndex;
+		int term = entry.getTerm() > 0 ? entry.getTerm() : logTerm;
+		LogEntry newLogEntry= new LogEntry(getLastLogIndex(), term, entry.getEntry(), entry.getClientID()); 
+		logFile.seek(fileLog.length());
+		logFile.writeBytes(newLogEntry.toString());
 	}
 
 	/**
 	 * Commits a log entry
+	 * @throws IOException 
 	 */
-	public String commitLogEntry(int commitEntryIndex) {
-		String commitedLog = null;
+	public boolean commitLogEntry(int logEntryIndex) throws IOException {
 
-		try {
-			setPointerAtIndex(commitEntryIndex - 1);
-
-			LogEntry logEntry = new LogEntry(logFile.readLine());
-			logEntry.setCommited(true);
-
-			setPointerAtIndex(commitEntryIndex - 1);
-			logFile.write(logEntry.writeln());
-
-			commitedLog = logEntry.getLog();
-
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (logEntryIndex > getLastLogIndex()){
+			return false;
 		}
-		return commitedLog;
+
+		logFile.seek(0);
+
+		for(int i=0; i<logEntryIndex-1;i++){
+			logFile.readLine();
+		}
+		long pointer = logFile.getFilePointer();
+		String line = logFile.readLine();
+		if (line.length() < 1){
+			return false;
+		}
+		
+		LogEntry aux = new LogEntry();
+		StringBuilder sb = new StringBuilder(line);
+		int lastDelimiter = sb.lastIndexOf(aux.getDelimiter());
+		sb.replace(lastDelimiter+1, sb.length(), "true ");
+		logFile.seek(pointer);
+		logFile.writeBytes(sb.toString());
+		return true;
 	}
 
-	public boolean containsLogRecord(int logIndex, int logTerm) {
-		try {
-			if (fileIsEmpty() && logIndex == 0)
+	/**
+	 * Get last log index (current)
+	 */
+	public int getLastLogIndex() throws IOException  {
+		int countLines=0;
+		logFile.seek(0);
+		while(logFile.readLine() != null){
+			countLines++;
+		}
+		return countLines;
+	}
+
+	/**
+	 * Check if log file is empty
+	 * @return false if file is not empty
+	 * @throws IOException
+	 */
+	public boolean isLogEmpty() throws IOException{
+		return logFile.length() == 0;
+	}
+
+	/**
+	 * Check if Entry with logIndex on logTerm exists in log file
+	 * @param logIndex
+	 * @param logTerm
+	 * @return true if entry exist in log file
+	 * @throws IOException
+	 */
+	public boolean hasEntry(int logIndex, int logTerm) throws IOException{
+		if (isLogEmpty() || logIndex == 0 || logTerm == 0){
+			return false;
+		}
+
+		logFile.seek(0);
+		String line;
+		LogEntry entry = new LogEntry();
+		while((line = logFile.readLine()) != null){
+			if (line.startsWith(logIndex+entry.getDelimiter()+logTerm)){
 				return true;
-
-			logFile.seek(0);
-
-			LogEntry logEntry;
-			String pointerLog = logFile.readLine();
-
-			while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
-				logEntry = new LogEntry(pointerLog);
-
-				if (logEntry.getLogIndex() == logIndex && logEntry.getLogTerm() == logTerm) {
-					return true;
-				}
-				pointerLog = logFile.readLine(); // Reads until it reaches the last line
 			}
-		} catch (IOException e) {}
+		}
 		return false;
 	}
 
-	public LogEntry getLastLog() {
-		String lastLog = null, pointerLog = null;
+	/**
+	 * Iterate all log file to get the last entry
+	 * @return
+	 * @throws IOException
+	 */
+	public LogEntry getLastLogEntry() throws IOException{
+		logFile.seek(0);
+		String line;
+		LogEntry lastEntry=null;
+		while((line=logFile.readLine())!=null){
+			try{
+				lastEntry= new LogEntry(line);
+			}catch (Exception e){ //para o caso de haver uma linha mal feita/vazia/...
+				lastEntry = new LogEntry();
+			}
+		}
+		return lastEntry;
+	}
 
-		try {
+	/**
+	 * Remove all entrys after index (index excluded)
+	 * @param logIndex
+	 * @throws IOException
+	 */
+	public void removeEntrysAfterIndex(int logIndex) throws IOException{
+		if (logIndex>0){
 			logFile.seek(0);
-
-			pointerLog = logFile.readLine();
-			do { // Reads until it reaches the last line
-				lastLog = pointerLog;
-				pointerLog = logFile.readLine();
-			} while (pointerLog != null && !pointerLog.isEmpty());
-		} catch (IOException e) {}
-
-		return lastLog != null ? new LogEntry(lastLog) : new LogEntry();
-	}
-
-	/**
-	 * Deletes all logs from the logIndex, until the end of the file.
-	 */
-	public void deleteConflitingLogs(int logIndex) {
-		try {
-			int currentIndex = getCurrentLogIndex();
-
-			// Since we can't directly delete the lines from a file
-			// We need to create a new file with the lines to keep
-			// And then delete the old file
-
-			if (currentIndex >= logIndex) { // We check if there are lines to delete above our index
-				List<LogEntry> logs = getLogsSinceIndex(0);
-				List<LogEntry> logs2Keep = new ArrayList<>();
-
-				// First we get the lines to keep
-				for (int i = 1; i < logIndex; i++) {
-					logs2Keep.add(logs.get(i - 1));
-				}
-
-				if (!logs2Keep.isEmpty()) {
-					logFile.close(); // Then we close the current log file
-
-					// We create a temporary file to store the entries to keep
-					String tempFilename = filename + "_temp";
-					File tempFile = new File(tempFilename);
-					if (!tempFile.exists()) {
-						tempFile.createNewFile();
-					}
-
-					RandomAccessFile tempLogFile = new RandomAccessFile(tempFile, "rw");
-					// We store the entries to keep in the new file
-					for (int i = 0; i < logs2Keep.size(); i++) {
-						tempLogFile.write(logs2Keep.get(i).writeln());
-					}
-					tempLogFile.close();
-					
-					// And then we replace the old file with the new
-					tempFile.renameTo(new File(filename));
-				}
+			StringBuilder sb = new StringBuilder();
+			
+			for (int i = 0; i < logIndex; i++) {
+				sb.append(logFile.readLine()+"\n");
 			}
-		} catch (IOException e) {}
+			sb.deleteCharAt(sb.lastIndexOf("\n"));
+			logFile.setLength(0);
+			logFile.writeBytes(sb.toString());
+		} 
 	}
-
+	
 	/**
-	 * Gets the logs since a given index to replicate
-	 * to follower servers that are not up to date in
-	 * the client's format.
+	 * Get a List of Entries with all entries after logIndex (logIndex excluded) 
+	 * @param logIndex
+	 * @return
+	 * @throws IOException
 	 */
-	public Entry[] getEntriesSinceIndex(int logIndex) {
-		List<LogEntry> tempLogs = getLogsSinceIndex(logIndex);
-
-		Entry[] logs2Return = new Entry[tempLogs.size()];
-		for (int i = 0; i < tempLogs.size(); i++) {
-			logs2Return[i] = new Entry(tempLogs.get(i).getClientID(), null,
-					tempLogs.get(i).getLog(), tempLogs.get(i).getLogTerm(), tempLogs.get(i).isCommited());
-		}
-		return logs2Return;
-	}
-
-	public int getLastCommitedLogIndex() {
-		List<LogEntry> logs = getLogsSinceIndex(0);
-		for (int i = logs.size() -1; i >= 0; i--) {
-			if (logs.get(i).isCommited()) {
-				return logs.get(i).getLogIndex();
-			}
-		}
-		return 0;
-	}
-
-	private int getCurrentLogIndex() throws IOException {
-		// NOT RETURNING THE NUMBER OF FILLED LINES
-		// return (int) logFile.length();
-		// So a workaround is needed
+	public List<Entry> getAllEntriesAfterIndex (int logIndex) throws IOException{
+		
+		List<Entry> missedEntrys = new LinkedList<Entry>();
+		
+		String line;
 		logFile.seek(0);
-
-		int i = 0;
-		String pointerLog = logFile.readLine();
-
-		while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
-			i++;
-			pointerLog = logFile.readLine(); // Reads until it reaches the last line
-		}
-
-		// When the file is empty the pointerLog is null
-		// But has made the same .readLine() as if had 1 line
-		return i;
-	}
-
-	private void setPointerAtIndex(int index) throws IOException {
-		// NOT WORKING HOW IT WAS SUPPOSED
-		// logFile.seek(commitEntryIndex - 1);
-		// So a workaround is needed
-		logFile.seek(0);
-
-		for (int i = 0; i < index; i++) { // Reads until it reaches the line we want
+		LogEntry le = new LogEntry();
+				
+		//posicionar o logFile para a ultima entry "valida"
+		for(int i=0; i< logIndex;i++){
 			logFile.readLine();
 		}
-	}
-
-	private boolean fileIsEmpty() throws IOException {
-		// NOT RETURNING THE NUMBER OF FILLED LINES
-		// return (int) logFile.length();
-		// So a workaround is needed
-		logFile.seek(0);
-
-		int i = 0;
-		String pointerLog = logFile.readLine();
-
-		while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
-			i++;
-			pointerLog = logFile.readLine(); // Reads until it reaches the last line
+		
+		while((line=logFile.readLine()) != null){
+			le = new LogEntry(line);
+			missedEntrys.add(le.convertToEntry());
 		}
-		return i == 0;
+		
+		return missedEntrys;
 	}
-
-	/**
-	 * Gets the logs since a given index to replicate
-	 * to follower servers that are not up to date.
-	 * @return
-	 */
-	private List<LogEntry> getLogsSinceIndex(int logIndex) {
-		List<LogEntry> tempLogs = new ArrayList<>();
-		try {
-			setPointerAtIndex(logIndex);
-
-			String pointerLog = logFile.readLine();
-			while (pointerLog != null && !pointerLog.isEmpty()) { // Reads until it reaches the last line
-				tempLogs.add(new LogEntry(pointerLog));
-				pointerLog = logFile.readLine();
-			}
-
-		} catch (IOException e) {}
-		return tempLogs;
-	}
+	
 }
+///**
+// * Follower writes a client log received
+// * from the leader.
+// * 
+// * If an existing entry conflicts with a new one (same index
+// * 	but different terms), delete the existing entry and all
+// * 	that follow it (§5.3)
+// * Append any new entries not already in the log
+// * If leaderCommit > commitIndex, set commitIndex =
+// * 	min(leaderCommit, index of last new entry)
+// * 
+// * @return
+// * 1. false if term < currentTerm (§5.1)
+// * 2. false if log doesn’t contain an entry at prevLogIndex
+// * 		whose term matches prevLogTerm (§5.3)
+// */
+//	public Response followerReplication(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
+//
+//		Response response;
+//
+//		if (thisTerm < term || !containsLogRecord(prevLogIndex, prevLogTerm)) {
+//			// TODO if (thisTerm < term) update term
+//
+//			// If an existing entry conflicts with a new one (same index but 
+//			// different terms), delete the existing entry and all that follow it (§5.3)
+//			deleteConflitingLogs(prevLogIndex);
+//
+//			LogEntry lastLog = getLastLog();
+//
+//			response = new Response(thisTerm, false);
+//			response.setLogDeprecated();
+//			response.setLastLogTerm(lastLog.getLogTerm());
+//			response.setLastLogIndex(lastLog.getLogIndex());
+//			return response;
+//		}
+//
+//		// Writes log
+//		writeLogEntry(entries, term);
+//
+//		return new Response(thisTerm, true);
+//	}
