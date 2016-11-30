@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
@@ -27,6 +26,7 @@ public class RAFTServers {
 
 	private void loadServers() {
 		Queue<Response> voteQueue =  new ArrayBlockingQueue<Response>(20);
+		Queue<Response> responseQueue = new ArrayBlockingQueue<Response>(20);
 
 		BufferedReader br;
 		try {
@@ -43,7 +43,7 @@ public class RAFTServers {
 				serverAddress = serverData[0];
 				port = Integer.parseInt(serverData[1]);
 				numberOfServer++;	
-				servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), new ArrayBlockingQueue<Response>(20), voteQueue));
+				servers.add(new Server(serverAddress, port, numberOfServer, new ArrayBlockingQueue<Request>(20), responseQueue, voteQueue));
 			}
 			
 			br.close();

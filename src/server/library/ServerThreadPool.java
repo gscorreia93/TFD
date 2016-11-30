@@ -48,14 +48,14 @@ public class ServerThreadPool {
 	public class ServerThread extends Thread {
 
 		private BlockingQueue<Request> requestQueue;
-		private Queue<Response> responseQueue;
+		private BlockingQueue<Response> responseQueue;
 		private Queue<Response> voteQueue;
 		private Server server;
 		private boolean interrupted;
 
 		public ServerThread(Server server) {
 			this.requestQueue = server.getRequestQueue();
-			this.responseQueue = server.getResponseQueue();
+			this.responseQueue = (BlockingQueue<Response>) server.getResponseQueue();
 			this.voteQueue = server.getVoteQueue();
 			this.server = server;
 			this.interrupted = false;
@@ -87,7 +87,6 @@ public class ServerThreadPool {
 
 				Request rq = null;
 
-
 				try {
 					if (rq == null)
 						rq = requestQueue.take();
@@ -107,7 +106,6 @@ public class ServerThreadPool {
 
 						} catch (RemoteException e) {
 							System.err.println("RequestVoteRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
-							break;
 						}
 
 					} else if (rq.getClass() == AppendEntriesRequest.class) {
@@ -122,13 +120,14 @@ public class ServerThreadPool {
 							if (response != null) {
 								// To replicate a log
 								synchronized (response) {
-									responseQueue.add(response);
+									if(responseQueue.remainingCapacity() > 0){
+										responseQueue.add(response);
+									}
 								}
 							}
 
 						} catch (RemoteException e) {
 							System.err.println("AppendEntriesRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
-							break;
 						}
 					}
 

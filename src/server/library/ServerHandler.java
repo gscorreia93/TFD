@@ -1,5 +1,6 @@
 package server.library;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
@@ -7,11 +8,13 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import exceptions.ServerNotFoundException;
+import server.library.log.LogEntry;
 import server.library.log.LogHandler;
-import server.library.log.LogReplication;
 
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
 
@@ -20,12 +23,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	public static final int COMMIT_LOG = -2;
 	private final int CLIENT_REQUEST = -1;
 
-	private LogHandler lh;
 	private RAFTServers raftServers;
 
 	private Server server;
 	private ElectionHandler eh;
 	private ServerThreadPool serverThreadPool;
+	private Queue<Entry> entryQueue;
+	private LogHandler logHandler;
+	private int lastCommit = -1;
 
 	private int leaderID;
 
@@ -33,6 +38,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		super();
 
 		raftServers = new RAFTServers();
+		entryQueue = new LinkedList<Entry>();
 	}
 
 	public void openConnection() {
@@ -45,11 +51,12 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			serverThreadPool.startThreads(servers);
 
-			eh = new ElectionHandler(server, raftServers, serverThreadPool);
+			eh = new ElectionHandler(server, raftServers, serverThreadPool, entryQueue);
 			eh.startElectionHandler();
 
 			// Starts the log handler
-			lh = new LogHandler("LOG_" + server.getPort());
+			//lh = new LogHandler("LOG_" + server.getPort());
+			logHandler = new LogHandler("LOG_" + server.getAddress() + "_" + server.getPort());
 
 		} else {
 			System.err.println("Incorrect server configuration, server not starting");
@@ -120,24 +127,68 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
 			} else {
-				response = new LogReplication(server, raftServers.getServers(), lh).leaderReplication(entries, eh.getTerm());
+				logHandler.leaderReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
+				
+				for (int i = 0; i < entries.length; i++) {
+					entryQueue.add(entries[i]);
+				}
+				
+				int voteCount = 0;
+				int totalVoteCount = 0;
+
+				List<Server> servers = raftServers.getServers();
+				
+				int quorum = (servers.size() / 2) + 1;
+
+				Queue<Response> responseQueue = server.getResponseQueue();
+								
+				while (totalVoteCount < quorum && (voteCount < quorum)) {
+					if (!responseQueue.isEmpty()) {
+						
+						if (responseQueue.poll().isSuccessOrVoteGranted()) {
+							voteCount++;
+						}
+						
+						totalVoteCount++;
+					}
+				}
+				
+				if(voteCount >= quorum){
+					response = new Response(eh.getTerm(), true);
+				}else {	
+					response = new Response(eh.getTerm(), false);
+				}
+				
+				
+				LogEntry le;
+				try {
+					le = logHandler.getLastLogEntry();
+					
+					eh.setLastLog(le);
+					
+					lastCommit = le.getLogIndex();
+					
+					logHandler.commitLogEntry(lastCommit);
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 
 			// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
-			response = new LogReplication(server, raftServers.getServers(), lh).commitLog(leaderCommit, eh.getTerm());
+			//response = new LogReplication(server, raftServers.getServers(), lh).commitLog(leaderCommit, eh.getTerm());
 
 
 			// When a follower receives a request to appendEntries
-		} else if (entries != null && server.getState() != ServerState.LEADER) {
-
-			response = new LogReplication(server, raftServers.getServers(), lh).followerReplication(term,
-					leaderID, prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
-
-
-			// When a heartbeat is received
-		} else if (entries == null && server.getState() != ServerState.LEADER) {
+		} else {
+						
 			leaderID = leaderId;
+			
+			if(entries != null && entries.length != 0){
+				response = logHandler.followerReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
+			}
+			
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
 				serverThreadPool.interruptThreads();
@@ -147,6 +198,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.resetState();
 		}
 
+		if(response != null && response.getLeaderID() == 0){
+			response.setLeaderID(server.getServerID());
+		}
+		
 		return response;
 	}
 }

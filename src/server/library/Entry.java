@@ -49,6 +49,14 @@ public class Entry implements Serializable {
 		return term;
 	}
 
+	public void setCommited(boolean commited) {
+		this.commited = commited;
+	}
+
+	public void setTerm(int term) {
+		this.term = term;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;

@@ -11,6 +11,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import server.library.log.LogEntry;
+
 public class ElectionHandler {
 
 	private int term = 0;
@@ -18,14 +20,22 @@ public class ElectionHandler {
 	private boolean voted;
 	private RAFTServers raftServers;
 	private ServerThreadPool serverThreadPool;
-
+	private Queue<Entry> entryQueue;
+	private LogEntry lastLog;
+	
 	private ScheduledExecutorService sEs;
 	Set<Integer> termVotes = new HashSet<>();
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue) {
 		this.candidateServer = candidateServer;
 		this.raftServers = raftServers;
 		this.serverThreadPool = serverThreadPool;
+		this.entryQueue = entryQueue;
+	}
+	
+	protected void setLastLog(LogEntry lastLog){
+		
+		this.lastLog = lastLog;
 	}
 
 	protected void startElectionHandler() {
@@ -133,16 +143,32 @@ public class ElectionHandler {
 				public void run() {
 
 					List<Server> servers = raftServers.getServers();
+					
+					Entry[] entries = new Entry[entryQueue.size()];
+
+					for (int i = 0; i < entries.length; i++) {
+						entries[i] = entryQueue.poll();
+					}
 
 					for (Server server : servers) {
 
 						BlockingQueue<Request> bq = server.getRequestQueue();
 
 						if (bq.remainingCapacity() != 0){
-							AppendEntriesRequest aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, null, 0);
 
-							if(!bq.contains(aR)){
-								bq.add(aR);
+							if(server.getServerID() != candidateServer.getServerID()){
+								AppendEntriesRequest aR;
+								
+								if(lastLog == null){
+									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, entries, 0);
+								}else{
+									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), lastLog.getLogIndex(), lastLog.getLogTerm(), entries, 0);
+									lastLog = null;
+								}
+	
+								if(!bq.contains(aR)){
+									bq.add(aR);
+								}
 							}
 						}
 					}
