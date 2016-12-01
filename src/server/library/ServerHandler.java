@@ -1,6 +1,5 @@
 package server.library;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
@@ -12,7 +11,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-import exceptions.ServerNotFoundException;
 import server.library.log.LogEntry;
 import server.library.log.LogHandler;
 
@@ -66,7 +64,8 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 	private Server startServer(List<Server> servers) {
 		if (servers == null || servers.isEmpty()) {
-			throw new ServerNotFoundException();
+			System.err.println("There are no more available servers to connect");
+			return null;
 		}
 
 		for (Server server : servers) {
@@ -85,7 +84,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				e.printStackTrace();
 			}
 		}
-		throw new ServerNotFoundException();
+		return null;
 	}
 
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
@@ -127,6 +126,9 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
 			} else {
+				
+				//????? Isto faz o que?
+				
 				logHandler.leaderReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
 				
 				for (int i = 0; i < entries.length; i++) {
@@ -161,18 +163,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 				
 				
 				LogEntry le;
-				try {
-					le = logHandler.getLastLogEntry();
-					
-					eh.setLastLog(le);
-					
-					lastCommit = le.getLogIndex();
-					
-					logHandler.commitLogEntry(lastCommit);
-					
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				le = logHandler.getLastLogEntry();
+				
+				eh.setLastLog(le);
+				
+				lastCommit = le.getLogIndex();
+				
+				logHandler.commitLogEntry(lastCommit);
 			}
 
 			// Commits a log in all servers

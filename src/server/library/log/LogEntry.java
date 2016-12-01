@@ -67,8 +67,4 @@ public class LogEntry {
 		converted.setCommited(commited);
 		return converted;
 	}
-
-//	public byte[] writeln() {
-//		return (toString() + "\n").getBytes();
-//	}
 }
