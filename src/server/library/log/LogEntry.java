@@ -10,6 +10,7 @@ public class LogEntry {
 	private int logTerm;
 	private String command;
 	private String clientID;
+	private String requestID;
 	private boolean commited = false;
 
 	public LogEntry() {
@@ -23,14 +24,16 @@ public class LogEntry {
 		logTerm = Integer.parseInt(logParts[1]);
 		command = logParts[2];
 		clientID = logParts[3];
-		commited = Boolean.valueOf(logParts[4].trim());
+		requestID = logParts[4];
+		commited = Boolean.valueOf(logParts[5].trim());
 	}
 
-	public LogEntry(int logIndex, int logTerm, String command, String clientID) {
+	public LogEntry(int logIndex, int logTerm, String command, String clientID, String requestID) {
 		this.logIndex = logIndex;
 		this.logTerm = logTerm;
 		this.command = command;
 		this.clientID = clientID;
+		this.requestID = requestID;
 	}
 
 	public int getLogIndex() {
@@ -49,6 +52,10 @@ public class LogEntry {
 	public String getClientID() {
 		return clientID;
 	}
+	
+	public String getRequestID(){
+		return requestID;
+	}
 
 	public boolean isCommited() {
 		return commited;
@@ -58,11 +65,11 @@ public class LogEntry {
 	}
 
 	public String toString() {
-		return logIndex + SPLITTER + logTerm + SPLITTER + command + SPLITTER + clientID + SPLITTER + commited;
+		return logIndex + SPLITTER + logTerm + SPLITTER + command + SPLITTER + clientID + SPLITTER + requestID + SPLITTER + commited;
 	}
 	
 	public Entry convertToEntry(){
-		Entry converted = new Entry(clientID, null, command);
+		Entry converted = new Entry(clientID, requestID, command);
 		converted.setTerm(logTerm);
 		converted.setCommited(commited);
 		return converted;

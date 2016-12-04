@@ -7,6 +7,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -28,7 +29,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private ServerThreadPool serverThreadPool;
 	private Queue<Entry> entryQueue;
 	private LogHandler logHandler;
-	private int lastCommit = -1;
 
 	private int leaderID;
 
@@ -53,7 +53,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh.startElectionHandler();
 
 			// Starts the log handler
-			//lh = new LogHandler("LOG_" + server.getPort());
 			logHandler = new LogHandler("LOG_" + server.getAddress() + "_" + server.getPort());
 
 		} else {
@@ -100,7 +99,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			serverThreadPool.purgeQueues();
 
 			if (!eh.isFollower() && candidateID != server.getServerID()) {
-				
+
 				eh.setServerState(ServerState.FOLLOWER);
 			}
 			response = new Response(eh.getTerm(), true);
@@ -120,72 +119,84 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
 
-		if (term == CLIENT_REQUEST) { // If it is a Client Request
-			if(server.getState() != ServerState.LEADER) {
+		if (term == CLIENT_REQUEST) { // FROM CLIENT
+
+			if(server.getState() != ServerState.LEADER) {  //NOT LEADER
 				System.err.println("Redirecting to Leader (" + leaderID + ")" );
 				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
-			} else {
-				
-				//????? Isto faz o que?
-				
-				logHandler.leaderReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
-				
-				for (int i = 0; i < entries.length; i++) {
-					entryQueue.add(entries[i]);
-				}
-				
-				int voteCount = 0;
-				int totalVoteCount = 0;
 
-				List<Server> servers = raftServers.getServers();
-				
-				int quorum = (servers.size() / 2) + 1;
+			} else {  // LEADER
+				if(entries != null && entries.length != 0){
+					logHandler.writeLogEntries(entries,eh.getTerm());
 
-				Queue<Response> responseQueue = server.getResponseQueue();
-								
-				while (totalVoteCount < quorum && (voteCount < quorum)) {
-					if (!responseQueue.isEmpty()) {
-						
-						if (responseQueue.poll().isSuccessOrVoteGranted()) {
-							voteCount++;
+					//adiciona as entries ah queue para serem despachadas quando tiverem tempo de processamento
+					for (int i = 0; i < entries.length; i++) {
+						entryQueue.add(entries[i]);
+					}
+
+					List<Server> servers = raftServers.getServers();
+					int quorum = (servers.size() / 2) + 1;
+
+					Queue<Response> responseQueue = server.getResponseQueue();
+
+					int voteSuccess = 0;
+					int totalVoteCount = 0;
+
+					for (int i = 0; i < entries.length; i++) {
+						System.out.println(entries[i].getClientID() + " says '" + entries[i].getEntry() + "'");
+						if (!responseQueue.isEmpty()) {
+							//por cada entry vai percorrer a queue ah procura das respostas dessa entry
+							while (totalVoteCount < quorum && (voteSuccess < quorum)) {  
+								for (Response element : responseQueue) {
+									if (element.getRequestID().equals(entries[i].getRequestID())){
+										if (element.isSuccessOrVoteGranted()){
+											response = element;
+											voteSuccess++;
+										}
+										totalVoteCount++;
+									}
+								}
+							}
+							responseQueue.remove(response);
+
+							if(voteSuccess >= quorum){
+								response = new Response(eh.getTerm(), true);
+							} else {	
+								response = new Response(eh.getTerm(), false);
+							}
+
+							logHandler.commitLogEntry(logHandler.getLogEntryIndex(entries[i]));
+
+							voteSuccess = 0;
+							totalVoteCount = 0;
 						}
-						
-						totalVoteCount++;
 					}
 				}
-				
-				if(voteCount >= quorum){
-					response = new Response(eh.getTerm(), true);
-				}else {	
-					response = new Response(eh.getTerm(), false);
+				else{
+					return new Response(eh.getTerm(), true);
 				}
-				
-				
-				LogEntry le;
-				le = logHandler.getLastLogEntry();
-				
-				eh.setLastLog(le);
-				
-				lastCommit = le.getLogIndex();
-				
-				logHandler.commitLogEntry(lastCommit);
+
 			}
 
 			// Commits a log in all servers
-		} else if (term == COMMIT_LOG) {
+		} else if (term == COMMIT_LOG) { 
 			//response = new LogReplication(server, raftServers.getServers(), lh).commitLog(leaderCommit, eh.getTerm());
 
 
 			// When a follower receives a request to appendEntries
-		} else {
-						
+		} else {  
+
 			leaderID = leaderId;
-			
+
 			if(entries != null && entries.length != 0){
-				response = logHandler.followerReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
+				
+
+
+				System.out.println("Replication");	
+				//	response = logHandler.followerReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
 			}
-			
+
 			if (server.getState() != ServerState.FOLLOWER){
 				eh.setServerState(ServerState.FOLLOWER);
 				serverThreadPool.interruptThreads();
@@ -198,7 +209,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		if(response != null && response.getLeaderID() == 0){
 			response.setLeaderID(server.getServerID());
 		}
-		
+
 		return response;
 	}
 }

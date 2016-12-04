@@ -30,6 +30,7 @@ public abstract class Request {
 	public int getLastLogTerm() {
 		return lastLogTerm;
 	}
+	
 
 	@Override
 	public int hashCode() {
