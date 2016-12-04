@@ -80,11 +80,15 @@ public class ClientLibrary {
 		boolean success = false;
 		if (response != null) {
 			success = response.isSuccessOrVoteGranted();
+			
+			if (success) {
+				System.out.println(response.getResponse());
+			} else {
+				System.out.println("Operation wasn't executed");
+			}
 		} else {
 			System.err.println("An error ocurred at the server");
 		}
-		message = "success: " + success;
-		System.out.println(message);
 
 		return success;
 	}

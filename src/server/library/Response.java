@@ -14,14 +14,20 @@ public class Response implements Serializable{
 	private int lastLogTerm;
 	private int lastLogIndex;
 	private String requestID;
+	private String response;
 	private boolean successOrVoteGranted;
-	
 
 	public Response(int term, boolean successOrVoteGranted) {
 		this.term = term;
 		this.successOrVoteGranted = successOrVoteGranted;
 	}
-	
+
+	public Response(int term, String response) {
+		this.term = term;
+		this.response = response;
+		this.successOrVoteGranted = true;
+	}
+
 	public Response(int term, int leaderID, int denyCause, int lastLogTerm, int lastLogIndex, String requestID, boolean successOrVoteGranted) {
 		this.term = term;
 		this.leaderID = leaderID;
@@ -40,13 +46,17 @@ public class Response implements Serializable{
 		return successOrVoteGranted;
 	}
 
+	public String getResponse() {
+		return response;
+	}
+
 	public void setLeaderID (int leaderId){
 		leaderID = leaderId;
 	}
 	public int getLeaderID(){
 		return leaderID;
 	}
-	
+
 	public String getRequestID(){
 		return requestID;
 	}

@@ -20,7 +20,7 @@ public class Client {
 			help();
 
 			while (true) { 
-				System.out.println("Insert command ('h' for help, 'q' to exit): ");
+				System.out.print("Command: ");
 				entry = s.nextLine();
 
 				if (entry == null || entry.equalsIgnoreCase("q"))
@@ -40,7 +40,7 @@ public class Client {
 				// }
 			}
 
-			System.out.println(clientID+" terminated");
+			System.out.println(clientID + " terminated");
 
 			s.close();
 		}
@@ -56,20 +56,11 @@ public class Client {
 		String parts[] = entry.split(" ");
 		String command = parts[0].toLowerCase();
 		
-		if (command.equals("put") && parts.length == 2) {
+		if ((command.equals("get") || command.equals("put")
+				|| command.equals("del")) && parts.length == 2) {
 			return true;
 		}
 		
-		if ((command.equals("get") || command.equals("del")) && parts.length == 2) {
-			try {
-				Integer.parseInt(parts[1]);
-				return true;
-			} catch (NumberFormatException e) {
-				System.err.println("Argument must be a number");
-				return false;
-			}
-		}
-
 		if (command.equals("cas")) {
 			System.err.println("not implemented");
 			return false;
@@ -87,6 +78,8 @@ public class Client {
 		System.out.println("del i \t Deletes an entry at index i");
 		System.out.println("put e \t Adds an entry e");
 		System.out.println("cas \t ?");
+		System.out.println("q \t quit");
+		System.out.println("h \t help");
 		System.out.println("-------------------------------------");
 	}
 }

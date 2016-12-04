@@ -3,6 +3,8 @@ package server.library.statemachine;
 import java.util.ArrayList;
 import java.util.List;
 
+import server.library.Response;
+
 public class StateMachine implements IService {
 
 	List<Operation> operations = new ArrayList<>();
@@ -27,11 +29,11 @@ public class StateMachine implements IService {
 		}
 
 		if (command.equals("get")) {
-			return get(Integer.parseInt(parts[1]));
+			return get(parts[1]);
 		}
-		
+
 		if (command.equals("del")) {
-			return del(Integer.parseInt(parts[1]));
+			return del(parts[1]);
 		}
 
 		if (command.equals("cas")) {
@@ -42,44 +44,82 @@ public class StateMachine implements IService {
 
 	private StringBuilder list() {
 		StringBuilder contents = new StringBuilder();
-		
+
 		if (!operations.isEmpty()) {
-			contents.append("--- List ---");
-			
-			for (Operation op: operations) {
-				contents.append(op);
+			contents.append("--- List ---\n");
+
+			for (int i = 0; i < operations.size(); i++) {
+				contents.append(operations.get(i) + (i + 1 < operations.size() ? "\n" : ""));
 			}
 		} else {
 			contents.append("No contents to list.");
 		}
 		return contents;
 	}
-	
+
 	private String put(String op) {
 		Operation operation = new Operation(op);
 		operations.add(operation);
-		return op + " successfully inserted!";
+		return "'" + op + "' successfully inserted!";
 	}
-	
-	private String get(int index) {
-		if (index >= operations.size()) {
-			return "Item doesn't exist";
+
+	private String get(String arg) {
+		int index = -1;
+		try {
+			index = Integer.parseInt(arg);
+		} catch (NumberFormatException e) { }
+
+		if (index > -1) {
+			if (index >= operations.size()) {
+				return "Item doesn't exist";
+			}
+			return operations.get(index).getOp();
+
+		} else {
+			String result = "Item doesn't exist";
+			for (Operation op: operations) {
+				if (op.getOp().equals(arg)) {
+					result = op.getOp();
+					break;
+				}
+			}
+			return result;
 		}
-		return operations.get(index).getOp();
 	}
-	
-	private String del(int index) {
-		if (index >= operations.size()) {
-			return "Item doesn't exist";
+
+	private String del(String arg) {
+		int index = -1;
+		try {
+			index = Integer.parseInt(arg);
+		} catch (NumberFormatException e) { }
+
+		String result = "";
+
+		if (index > -1) {
+			if (index >= operations.size()) {
+				return "Item doesn't exist";
+			}
+			if (index >= operations.size()) {
+				return "Item doesn't exist";
+			}
+			result = operations.get(index).getOp();
+
+			operations.remove(index);
+
+		} else {
+			for (int i = 0; i < operations.size(); i++) {
+				if (operations.get(i).getOp().equals(arg)) {
+					result = operations.get(i).getOp();
+					operations.remove(i);
+					break;
+				}
+			}
 		}
-		String op = operations.get(index).getOp();
-		
-		operations.remove(index);
-		
+
 		for (int i = 0; i < operations.size(); i++) {
 			operations.get(i).setIndex(i);
 		}
-		return op + " successfully deleted!";
+		return "'" + result + "' successfully deleted!";
 	}
 
 	private class Operation {
@@ -94,7 +134,7 @@ public class StateMachine implements IService {
 		String getOp() {
 			return op;
 		}
-		
+
 		void setIndex(int i) {
 			this.index= i;
 		}
@@ -104,3 +144,11 @@ public class StateMachine implements IService {
 		}
 	}
 }
+
+/**
+StringBuilder result = new StringBuilder();
+for (int i = 0; i < entries.length; i++) {
+	result.append(stateMachine.execute(entries[i].getEntry()) + "\n");
+}
+response = new Response(eh.getTerm(), result.toString());
+*/
