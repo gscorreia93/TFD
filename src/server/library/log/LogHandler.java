@@ -65,7 +65,8 @@ public class LogHandler {
 		if (thisTerm < term) {
 			// TODO if (thisTerm < term) update term
 		}
-
+		System.out.println(hasEntry(prevLogIndex, prevLogTerm));
+		
 		if (!hasEntry(prevLogIndex, prevLogTerm)) {
 			System.out.println(prevLogIndex + " " + prevLogTerm);
 
@@ -95,11 +96,12 @@ public class LogHandler {
 	 */
 	public int[] writeLogEntries(Entry[] entries, int logTerm) {
 		int[] indexes2Commit = new int[entries.length];
+		int term = 0;  
 		try {
 			for (int i = 0; i < entries.length; i++) {
 				logFile.seek(fileLog.length());
-
-				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex() + 1, logTerm, entries[i].getEntry(), entries[i].getClientID(), entries[i].getRequestID());
+				term = entries[i].getTerm() != 0 ? entries[i].getTerm() : logTerm;
+				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex() + 1, term, entries[i].getEntry(), entries[i].getClientID(), entries[i].getRequestID());
 
 				indexes2Commit[i] = lastLogEntry.getLogIndex();
 				logFile.writeBytes(lastLogEntry.toString());
@@ -187,16 +189,16 @@ public class LogHandler {
 	/**
 	 * Get the last log Entry committed
 	 */
-	public int getLastCommitedLogIndex() {
+	public LogEntry getLastCommitedLogEntry() {
 		List<LogEntry> logs;
 		logs = getAllEntriesAfterIndex(0);
 
 		for (int i = logs.size() - 1; i >= 0; i--) {
 			if (logs.get(i).isCommited()) {
-				return logs.get(i).getLogIndex();
+				return logs.get(i);
 			}
 		}
-		return 0;
+		return null;
 	}
 
 	public LogEntry getLastLogEntry() {
@@ -251,10 +253,10 @@ public class LogHandler {
 				sb.deleteCharAt(sb.lastIndexOf("\n"));
 				logFile.setLength(0);
 				logFile.writeBytes(sb.toString());
-
 			} catch (IOException e) {
 				System.err.println("Log file not found!");
 			}
+			
 		}
 	}
 

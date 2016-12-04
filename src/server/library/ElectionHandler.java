@@ -12,6 +12,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import server.library.log.LogEntry;
+import server.library.log.LogHandler;
 
 public class ElectionHandler {
 
@@ -23,16 +24,25 @@ public class ElectionHandler {
 	private Queue<Entry> entryQueue;
 	private Queue<Entry> commitQueue;
 	private LogEntry lastLog;
+	private LogHandler logHandler;
 	
 	private ScheduledExecutorService sEs;
 	Set<Integer> termVotes = new HashSet<>();
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue, LogHandler logHandler) {
 		this.candidateServer = candidateServer;
 		this.raftServers = raftServers;
 		this.serverThreadPool = serverThreadPool;
 		this.entryQueue = entryQueue;
 		this.commitQueue = commitQueue;
+		this.logHandler = logHandler;
+		
+		if (!logHandler.isLogEmpty()){
+			lastLog = logHandler.getLastCommitedLogEntry();
+			term = lastLog.getLogTerm();
+			System.out.println("UPDATE TERM TO "+term);
+		}
+		
 	}
 	
 	protected void startElectionHandler() {
@@ -163,8 +173,8 @@ public class ElectionHandler {
 								if (lastLog == null) {
 									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, entries, 0);
 								} else {
-									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), lastLog.getLogIndex(), lastLog.getLogTerm(), entries, 0);
-									lastLog = null;
+									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), lastLog.getLogIndex(), lastLog.getLogTerm(), entries, lastLog.getLastCommitedIndex());
+									//lastLog = null;
 								}
 								if (!bq.contains(aR)) {
 									bq.add(aR);

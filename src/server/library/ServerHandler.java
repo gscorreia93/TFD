@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
+import server.library.log.LogEntry;
 import server.library.log.LogHandler;
 
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
@@ -50,11 +51,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			serverThreadPool.startThreads(servers);
 
-			eh = new ElectionHandler(server, raftServers, serverThreadPool, entryQueue, commitQueue);
-			eh.startElectionHandler();
-
 			// Starts the log handler
 			logHandler = new LogHandler("LOG_" + server.getAddress() + "_" + server.getPort());
+			
+			eh = new ElectionHandler(server, raftServers, serverThreadPool, entryQueue, commitQueue, logHandler);
+			eh.startElectionHandler();
+
+			
 
 		} else {
 			System.err.println("Incorrect server configuration, server not starting");
@@ -129,7 +132,14 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			} else {  // LEADER
 				if (entries != null && entries.length != 0) {
-					eh.setLastLog(logHandler.getLastLogEntry());
+					LogEntry lastLog = logHandler.getLastLogEntry();
+					LogEntry lastCommitedLog = logHandler.getLastCommitedLogEntry();
+
+					if (lastCommitedLog != null) {
+						lastLog.setLastCommitedIndex(lastCommitedLog.getLogIndex());
+					}
+					eh.setLastLog(lastLog);
+					
 					int[] indexes2Commit = logHandler.writeLogEntries(entries, eh.getTerm());
 
 					// adiciona as entries ah queue para serem despachadas quando tiverem tempo de processamento
@@ -163,10 +173,29 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 							}
 						}
 					}
-
+									
+					
 					// Removes the received responses from the current request
 					for (Response e: elements) {
+						//Se a resposta eh de um follower que esta deprecated
+						if (e.isLogDeprecated()){
+							List<LogEntry> logEntry = logHandler.getAllEntriesAfterIndex(e.getLastLogIndex());
+							Entry [] entriesOfLog = new Entry[logEntry.size()];
+							for (int i = 0; i < entriesOfLog.length; i++) {
+								System.out.println(logEntry.get(i));
+								entriesOfLog[i] = logEntry.get(i).convertToEntry();
+								System.out.println(entriesOfLog[i]);
+							}
+							try {
+								servers.get(e.getServerID()-1).getRequestQueue().put(new AppendEntriesRequest(term, leaderId, e.getLastLogIndex(), e.getLastLogTerm(),entriesOfLog, 0));
+							} catch (InterruptedException e1) {
+								// TODO Auto-generated catch block
+								e1.printStackTrace();
+							}
+							System.out.println(e.getServerID());
+						}
 						responseQueue.remove(e);
+					
 					}
 
 					if (voteSuccess >= quorum) {
@@ -199,9 +228,9 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			leaderID = leaderId;
 
 			if (entries != null && entries.length != 0) {
-				System.out.println("term: " + term + ", leaderID: " + leaderId
-						+ ", prevLogIndex: " + prevLogIndex + ", prevLogTerm: " + prevLogTerm
-						+ ", leaderCommit: " + leaderCommit);
+				System.out.println("term: " + term + "\nleaderID: " + leaderId
+						+ "\nprevLogIndex: " + prevLogIndex + "\nprevLogTerm: " + prevLogTerm
+						+ "\nleaderCommit: " + leaderCommit);
 
 				response = logHandler.followerReplication(term, leaderId, 
 						prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());

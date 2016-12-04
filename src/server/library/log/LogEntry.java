@@ -12,6 +12,7 @@ public class LogEntry {
 	private String clientID;
 	private String requestID;
 	private boolean commited = false;
+	private int lastCommitedIndex;
 
 	public LogEntry() {
 		this.logIndex = 0;
@@ -71,5 +72,13 @@ public class LogEntry {
 		converted.setTerm(logTerm);
 		converted.setCommited(commited);
 		return converted;
+	}
+
+	public int getLastCommitedIndex() {
+		return lastCommitedIndex;
+	}
+
+	public void setLastCommitedIndex(int lastCommitedIndex) {
+		this.lastCommitedIndex = lastCommitedIndex;
 	}
 }

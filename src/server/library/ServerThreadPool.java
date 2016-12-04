@@ -115,9 +115,10 @@ public class ServerThreadPool {
 							Response response = stub.appendEntries(typedRequest.getTerm(), typedRequest.getServerId(),
 									typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm(),
 									typedRequest.getEntries(), typedRequest.getLeaderCommit());
-
+							
 							if (response != null) {
 								// To replicate a log
+								response.setServerID(server.getServerID());
 								synchronized (response) {
 									if (responseQueue.remainingCapacity() > 0) {
 										responseQueue.add(response);

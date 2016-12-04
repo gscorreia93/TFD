@@ -16,6 +16,7 @@ public class Response implements Serializable{
 	private String requestID;
 	private String response;
 	private boolean successOrVoteGranted;
+	private int serverID;
 
 	public Response(int term, boolean successOrVoteGranted) {
 		this.term = term;
@@ -28,7 +29,7 @@ public class Response implements Serializable{
 		this.successOrVoteGranted = true;
 	}
 
-	public Response(int term, int leaderID, int denyCause, int lastLogTerm, int lastLogIndex, String requestID, boolean successOrVoteGranted) {
+	public Response(int term, int leaderID, int denyCause, int lastLogTerm, int lastLogIndex, String requestID, boolean successOrVoteGranted,int serverID) {
 		this.term = term;
 		this.leaderID = leaderID;
 		this.denyCause = denyCause;
@@ -36,6 +37,7 @@ public class Response implements Serializable{
 		this.lastLogIndex = lastLogIndex;
 		this.requestID = requestID;
 		this.successOrVoteGranted = successOrVoteGranted;
+		this.setServerID(serverID);
 	}
 
 	public int getTerm() {
@@ -91,5 +93,13 @@ public class Response implements Serializable{
 				+ ", term: " + term
 				+ ", successOrVoteGranted: " + successOrVoteGranted
 				+ (successOrVoteGranted ? "" : ", denyCause: " + (denyCause == LOG_DEPRECATED ? "LOG_DEPRECATED" : "?"));
+	}
+
+	public int getServerID() {
+		return serverID;
+	}
+
+	public void setServerID(int serverID) {
+		this.serverID = serverID;
 	}
 }
