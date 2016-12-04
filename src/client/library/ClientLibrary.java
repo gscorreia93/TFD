@@ -46,8 +46,8 @@ public class ClientLibrary {
 	public boolean request(String clientID, String command) {
 
 		String message = null;
-
-		Entry[] entries = new Entry[] {new Entry(clientID, UUID.randomUUID().toString(), command)};
+		String requestID = UUID.randomUUID().toString();
+		Entry[] entries = new Entry[] {new Entry(clientID, requestID, command)};
 
 		Response response = null;
 		String[] serverData = null;
