@@ -100,7 +100,6 @@ public class ServerThreadPool {
 									typedRequest.getLastLogIndex(), typedRequest.getLastLogTerm());
 
 							synchronized (response) {
-								//		System.out.println("\t" + server.getPort() + " voting " + response.isSuccessOrVoteGranted() + " to " + typedRequest.getServerId());
 								voteQueue.add(response);
 							}
 
@@ -120,14 +119,14 @@ public class ServerThreadPool {
 							if (response != null) {
 								// To replicate a log
 								synchronized (response) {
-									if(responseQueue.remainingCapacity() > 0){
+									if (responseQueue.remainingCapacity() > 0) {
 										responseQueue.add(response);
 									}
 								}
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("AppendEntriesRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
+							System.err.println("AppendEntriesRequest: Failed to connect to " + server.getAddress()+":"+server.getPort()+"\tRetrying...");
 						}
 					}
 

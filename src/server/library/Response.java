@@ -43,13 +43,15 @@ public class Response implements Serializable{
 	public void setLeaderID (int leaderId){
 		leaderID = leaderId;
 	}
-
 	public int getLeaderID(){
 		return leaderID;
 	}
 	
 	public String getRequestID(){
 		return requestID;
+	}
+	public void setRequestID(String requestID) {
+		this.requestID = requestID;
 	}
 
 	public boolean isLogDeprecated() {
@@ -73,6 +75,7 @@ public class Response implements Serializable{
 		this.lastLogIndex = lastLogIndex;
 	}
 
+	@Override
 	public String toString() {
 		return "leaderID: " + leaderID
 				+ ", term: " + term

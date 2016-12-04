@@ -21,23 +21,20 @@ public class ElectionHandler {
 	private RAFTServers raftServers;
 	private ServerThreadPool serverThreadPool;
 	private Queue<Entry> entryQueue;
+	private Queue<Entry> commitQueue;
 	private LogEntry lastLog;
 	
 	private ScheduledExecutorService sEs;
 	Set<Integer> termVotes = new HashSet<>();
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue) {
 		this.candidateServer = candidateServer;
 		this.raftServers = raftServers;
 		this.serverThreadPool = serverThreadPool;
 		this.entryQueue = entryQueue;
+		this.commitQueue = commitQueue;
 	}
 	
-	protected void setLastLog(LogEntry lastLog){
-		
-		this.lastLog = lastLog;
-	}
-
 	protected void startElectionHandler() {
 		resetState();
 	}
@@ -136,7 +133,7 @@ public class ElectionHandler {
 		if (voteCount >= quorum) {
 			candidateServer.setState(ServerState.LEADER);
 
-			System.out.println("LEADER!\tTerm:["+term+"] VoteCount:["+voteCount+"]");
+			System.out.println("LEADER!\tTerm:["  +term + "] VoteCount:[" + voteCount + "]");
 
 			Runnable runnable = new TimerTask() { // heartbeat
 				@Override
@@ -145,29 +142,40 @@ public class ElectionHandler {
 					List<Server> servers = raftServers.getServers();
 					
 					Entry[] entries = new Entry[entryQueue.size()];
-
 					for (int i = 0; i < entries.length; i++) {
 						entries[i] = entryQueue.poll();
+					}
+					
+					Entry[] commitEntries = new Entry[commitQueue.size()];
+					for (int i = 0; i < commitEntries.length; i++) {
+						commitEntries[i] = commitQueue.poll();
 					}
 
 					for (Server server : servers) {
 
 						BlockingQueue<Request> bq = server.getRequestQueue();
 
-						if (bq.remainingCapacity() != 0){
+						if (bq.remainingCapacity() != 0) {
 
-							if(server.getServerID() != candidateServer.getServerID()){
+							if (server.getServerID() != candidateServer.getServerID()) {
 								AppendEntriesRequest aR;
 								
-								if(lastLog == null){
+								if (lastLog == null) {
 									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, entries, 0);
-								}else{
+								} else {
 									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), lastLog.getLogIndex(), lastLog.getLogTerm(), entries, 0);
 									lastLog = null;
 								}
-	
-								if(!bq.contains(aR)){
+								if (!bq.contains(aR)) {
 									bq.add(aR);
+								}
+
+								if (commitEntries.length > 0) {
+									aR = new AppendEntriesRequest(ServerHandler.COMMIT_LOG, 0, 0, 0, commitEntries, 0);
+
+									if (!bq.contains(aR)) {
+										bq.add(aR);
+									}
 								}
 							}
 						}
@@ -183,32 +191,32 @@ public class ElectionHandler {
 	protected boolean isLeader() {
 		return candidateServer.getState() == ServerState.LEADER;
 	}
-
 	protected boolean isFollower() {
 		return candidateServer.getState() == ServerState.FOLLOWER;
 	}
 
+	protected void setLastLog(LogEntry lastLog){
+		this.lastLog = lastLog;
+	}
+	
+	protected void setTerm(int term) {
+		this.term = term;
+	}
 	protected int getTerm() {
 		return term;
-	}
-
-	protected ServerState getState() {
-		return candidateServer.getState();
 	}
 
 	protected void setServerState(ServerState state) {
 		this.candidateServer.setState(state);
 	}
+	protected ServerState getState() {
+		return candidateServer.getState();
+	}
 
 	protected void setVoted(boolean voted) {
 		this.voted = voted;
 	}
-
 	protected boolean hasVoted() {
 		return voted;
-	}
-
-	protected void setTerm(int term) {
-		this.term = term;
 	}
 }

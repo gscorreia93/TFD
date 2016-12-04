@@ -41,7 +41,7 @@ public class LogHandler {
 		findLastLogEntry();
 	}
 
-	/*	/**
+	/**
 	 * Follower writes a client log received
 	 * from the leader.
 	 * 
@@ -56,13 +56,17 @@ public class LogHandler {
 	 * 1. false if term < currentTerm (§5.1)
 	 * 2. false if log doesn’t contain an entry at prevLogIndex
 	 * 		whose term matches prevLogTerm (§5.3)
-
+	 */
 	public Response followerReplication(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
 
 		Response response;
+		String requestID = entries.length > 0 ? entries[0].getRequestID() : "NOT_FOUND";
 
-		if (thisTerm < term || hasEntry(prevLogIndex, prevLogTerm)) {
+		if (thisTerm < term) {
 			// TODO if (thisTerm < term) update term
+		}
+
+		if (!hasEntry(prevLogIndex, prevLogTerm)) {
 			System.out.println(prevLogIndex + " " + prevLogTerm);
 
 			// If an existing entry conflicts with a new one (same index but 
@@ -73,6 +77,7 @@ public class LogHandler {
 
 			response = new Response(thisTerm, false);
 			response.setLogDeprecated();
+			response.setRequestID(requestID);
 			response.setLastLogTerm(lastLog.getLogTerm());
 			response.setLastLogIndex(lastLog.getLogIndex());
 			return response;
@@ -80,49 +85,36 @@ public class LogHandler {
 
 		writeLogEntries(entries, term);
 
-		return new Response(thisTerm, true);
+		response = new Response(thisTerm, true);
+		response.setRequestID(requestID);
+		return response;
 	}
-
-
-	public void leaderReplication(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
-
-		//leader appends client command to his log as a new entry then 
-		writeLogEntries(entries, thisTerm);
-
-
-		if (thisTerm < term || !hasEntry(prevLogIndex, prevLogTerm)) {
-			// TODO if (thisTerm < term) update term
-
-			// If an existing entry conflicts with a new one (same index but 
-			// different terms), delete the existing entry and all that follow it (§5.3)
-
-
-			removeEntrysAfterIndex(prevLogIndex);
-		}
-	}
-	 */
 
 	/**
 	 * Writes all entries received on end of log
 	 */
-	public void writeLogEntries(Entry[] entries, int logTerm) {
+	public int[] writeLogEntries(Entry[] entries, int logTerm) {
+		int[] indexes2Commit = new int[entries.length];
 		try {
 			for (int i = 0; i < entries.length; i++) {
 				logFile.seek(fileLog.length());
-				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex()+1, logTerm, entries[i].getEntry(), entries[i].getClientID(),entries[i].getRequestID());
+
+				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex() + 1, logTerm, entries[i].getEntry(), entries[i].getClientID(), entries[i].getRequestID());
+
+				indexes2Commit[i] = lastLogEntry.getLogIndex();
 				logFile.writeBytes(lastLogEntry.toString());
 			}
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 			e.printStackTrace();
 		}
+		return indexes2Commit;
 	}
 
 	/**
 	 * Set a specific logEntry to committed
 	 */
 	public boolean commitLogEntry(int logEntryIndex){
-
 		if (logEntryIndex > lastLogEntry.getLogIndex()) {
 			return false;
 		}
@@ -138,12 +130,14 @@ public class LogHandler {
 				return false;
 			}
 
-			LogEntry aux = new LogEntry();
 			StringBuilder sb = new StringBuilder(line);
-			int lastDelimiter = sb.lastIndexOf(aux.getDelimiter());
+			
+			int lastDelimiter = sb.lastIndexOf(LogEntry.SPLITTER);
 			sb.replace(lastDelimiter + 1, sb.length(), "true ");
+
 			logFile.seek(pointer);
 			logFile.writeBytes(sb.toString());
+
 			return true;
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
@@ -152,7 +146,7 @@ public class LogHandler {
 		return false;
 	}
 
-	public void findLastLogEntry()  {
+	public void findLastLogEntry() {
 		String line = null;
 		lastLogEntry = new LogEntry();
 		if(!isLogEmpty()){
@@ -205,13 +199,13 @@ public class LogHandler {
 		return 0;
 	}
 
-	public LogEntry getLastLogEntry(){
+	public LogEntry getLastLogEntry() {
 		return lastLogEntry;
 	}
 	/**
 	 * Check if log file is empty
 	 */
-	public boolean isLogEmpty()  {
+	public boolean isLogEmpty() {
 		try {
 			return logFile.length() == 0;
 		} catch (IOException e) {
@@ -224,16 +218,15 @@ public class LogHandler {
 	 * Check if Entry with logIndex on logTerm exists in log file
 	 */
 	public boolean hasEntry(int logIndex, int logTerm)  {
-		if (isLogEmpty() || logIndex == 0 || logTerm == 0) {
-			return false;
+		if (isLogEmpty() && logIndex == 0 && logTerm == 0) {
+			return true;
 		}
 
 		try {
 			logFile.seek(0);
 			String line;
-			LogEntry entry = new LogEntry();
 			while ((line = logFile.readLine()) != null) {
-				if (line.startsWith(logIndex + entry.getDelimiter() + logTerm)) {
+				if (line.startsWith(logIndex + LogEntry.SPLITTER + logTerm)) {
 					return true;
 				}
 			}

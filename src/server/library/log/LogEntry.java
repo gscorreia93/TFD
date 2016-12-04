@@ -4,7 +4,7 @@ import server.library.Entry;
 
 public class LogEntry {
 
-	private final String SPLITTER = "|";
+	public final static String SPLITTER = "|";
 
 	private int logIndex;
 	private int logTerm;
@@ -40,9 +40,6 @@ public class LogEntry {
 		return logIndex;
 	}
 	
-	public String getDelimiter(){
-		return SPLITTER;
-	}
 	public int getLogTerm() {
 		return logTerm;
 	}
@@ -65,7 +62,8 @@ public class LogEntry {
 	}
 
 	public String toString() {
-		return logIndex + SPLITTER + logTerm + SPLITTER + command + SPLITTER + clientID + SPLITTER + requestID + SPLITTER + commited;
+		return logIndex + SPLITTER + logTerm + SPLITTER + command + 
+				SPLITTER + clientID + SPLITTER + requestID + SPLITTER + commited + "\n";
 	}
 	
 	public Entry convertToEntry(){

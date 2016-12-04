@@ -12,7 +12,7 @@ public class Client {
 		final String clientID = UUID.randomUUID().toString().substring(0, 7);
 
 		ClientLibrary c = new ClientLibrary();
-		
+
 		if (c.connectToServer(clientID)){
 			String entry = null;
 			Scanner s = new Scanner(System.in);
@@ -20,7 +20,7 @@ public class Client {
 			while (true) { 
 				System.out.println("Insert command ('q' to exit): ");
 				entry = s.nextLine();
-					
+
 				if (entry.equalsIgnoreCase("q") || entry==null)
 					break;
 

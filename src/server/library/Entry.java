@@ -11,6 +11,7 @@ public class Entry implements Serializable {
 	private String requestID;
 	private int term;
 	private boolean commited;
+	private int commitedIndex;
 
 	public Entry(String clientID, String requestID, String entry) {
 		this.entry = entry;
@@ -29,8 +30,8 @@ public class Entry implements Serializable {
 		this.commited = commited;
 	}
 
-	public boolean isCommited() {
-		return commited;
+	public Entry(int commitedIndex) {
+		this.commitedIndex = commitedIndex;
 	}
 
 	public String getEntry() {
@@ -45,16 +46,30 @@ public class Entry implements Serializable {
 		return requestID;
 	}
 
-	public int getTerm() {
-		return term;
+	public int getCommitedIndex() {
+		return commitedIndex;
 	}
 
+	public boolean isCommited() {
+		return commited;
+	}
 	public void setCommited(boolean commited) {
 		this.commited = commited;
 	}
 
+	public int getTerm() {
+		return term;
+	}
 	public void setTerm(int term) {
 		this.term = term;
+	}
+
+	@Override
+	public String toString() {
+		return "clientID: " + clientID
+				+ ", entry: " + entry
+				+ ", requestID: " + requestID
+				+ ", term: " + term;
 	}
 
 	@Override
@@ -75,6 +90,7 @@ public class Entry implements Serializable {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
+
 		Entry other = (Entry) obj;
 		if (clientID == null) {
 			if (other.clientID != null)
@@ -91,6 +107,7 @@ public class Entry implements Serializable {
 				return false;
 		} else if (!requestID.equals(other.requestID))
 			return false;
+
 		return true;
 	}
 }
