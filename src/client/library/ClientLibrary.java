@@ -61,6 +61,7 @@ public class ClientLibrary {
 			try {
 				response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
 				//fez o pedido a um follower
+				
 				if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false){
 					System.err.println("Follower :(    Trying Leader...");
 					serverData = servers.get(response.getLeaderID()-1).split(":");
@@ -74,7 +75,6 @@ public class ClientLibrary {
 				connectToServer(clientID);
 			}
 		}
-		
 		message = "success: " + response.isSuccessOrVoteGranted();
 		System.out.println(message);
 	

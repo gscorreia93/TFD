@@ -143,38 +143,36 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					int voteSuccess = 0;
 					int totalVoteCount = 0;
 
-					for (int i = 0; i < entries.length; i++) {
-						System.out.println(entries[i].getClientID() + " says '" + entries[i].getEntry() + "'");
-						if (!responseQueue.isEmpty()) {
-							//por cada entry vai percorrer a queue ah procura das respostas dessa entry
-							while (totalVoteCount < quorum && (voteSuccess < quorum)) {  
-								for (Response element : responseQueue) {
-									if (element.getRequestID().equals(entries[i].getRequestID())){
-										if (element.isSuccessOrVoteGranted()){
-											response = element;
-											voteSuccess++;
-										}
-										totalVoteCount++;
+					System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() + "'");
+					if (!responseQueue.isEmpty()) {
+						//por cada entry vai percorrer a queue ah procura das respostas dessa entry
+						while (totalVoteCount < quorum && (voteSuccess < quorum)) {  
+							for (Response element : responseQueue) {
+								if (element.getRequestID().equals(entries[0].getRequestID())){
+									if (element.isSuccessOrVoteGranted()){
+										response = element;
+										voteSuccess++;
 									}
+									totalVoteCount++;
 								}
 							}
-							responseQueue.remove(response);
-
-							if(voteSuccess >= quorum){
-								response = new Response(eh.getTerm(), true);
-							} else {	
-								response = new Response(eh.getTerm(), false);
-							}
-
-							logHandler.commitLogEntry(logHandler.getLogEntryIndex(entries[i]));
-
-							voteSuccess = 0;
-							totalVoteCount = 0;
 						}
+						responseQueue.remove(response);
+
+						if(voteSuccess >= quorum){
+							response = new Response(eh.getTerm(), true);
+						} else {	
+							response = new Response(eh.getTerm(), false);
+						}
+
+						logHandler.getLastLogEntry().setCommited(true);
+
+						voteSuccess = 0;
+						totalVoteCount = 0;
 					}
 				}
 				else{
-					return new Response(eh.getTerm(), true);
+					response = new Response(eh.getTerm(), true);
 				}
 
 			}
@@ -190,11 +188,17 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			leaderID = leaderId;
 
 			if(entries != null && entries.length != 0){
+				System.out.println("term: "+ term+ "leaderID: "+leaderId+ "prevLogIndex: "+prevLogIndex+ "prevLogTerm: "+prevLogTerm+ "leaderCommit: "+ leaderCommit);
 				
-
-
+							
+				logHandler.writeLogEntries(entries, term);
+				
 				System.out.println("Replication");	
 				//	response = logHandler.followerReplication(prevLogTerm, leaderId, prevLogIndex, prevLogTerm, entries, leaderCommit, term);
+				
+				
+				
+				return new Response(eh.getTerm(), true);
 			}
 
 			if (server.getState() != ServerState.FOLLOWER){
