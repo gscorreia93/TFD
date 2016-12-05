@@ -47,32 +47,32 @@ public class LogHandler {
 	 * 
 	 * If an existing entry conflicts with a new one (same index
 	 * 	but different terms), delete the existing entry and all
-	 * 	that follow it (§5.3)
+	 * 	that follow it (ï¿½5.3)
 	 * Append any new entries not already in the log
 	 * If leaderCommit > commitIndex, set commitIndex =
 	 * 	min(leaderCommit, index of last new entry)
 	 * 
 	 * @return
-	 * 1. false if term < currentTerm (§5.1)
-	 * 2. false if log doesn’t contain an entry at prevLogIndex
-	 * 		whose term matches prevLogTerm (§5.3)
+	 * 1. false if term < currentTerm (ï¿½5.1)
+	 * 2. false if log doesnï¿½t contain an entry at prevLogIndex
+	 * 		whose term matches prevLogTerm (ï¿½5.3)
 	 */
 	public Response followerReplication(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
 
 		Response response;
-		String requestID = entries.length > 0 ? entries[0].getRequestID() : "NOT_FOUND";
+		String requestID = entries.length > 0 ? entries[entries.length - 1].getRequestID() : "NOT_FOUND";
 
 		if (thisTerm < term) {
 			// TODO if (thisTerm < term) update term
 		}
-		System.out.println(hasEntry(prevLogIndex, prevLogTerm));
-		
+		System.out.println(prevLogIndex + " " + prevLogTerm + " = " + hasEntry(prevLogIndex, prevLogTerm));
+
 		if (!hasEntry(prevLogIndex, prevLogTerm)) {
-			System.out.println(prevLogIndex + " " + prevLogTerm);
+			System.out.println("DEPRECATED");
 
 			// If an existing entry conflicts with a new one (same index but 
-			// different terms), delete the existing entry and all that follow it (§5.3)
-			removeEntrysAfterIndex(prevLogIndex);
+			// different terms), delete the existing entry and all that follow it (ï¿½5.3)
+			removeEntriesAfterIndex(prevLogIndex);
 
 			LogEntry lastLog = getLastLogEntry();
 
@@ -101,13 +101,15 @@ public class LogHandler {
 			for (int i = 0; i < entries.length; i++) {
 				logFile.seek(fileLog.length());
 				term = entries[i].getTerm() != 0 ? entries[i].getTerm() : logTerm;
-				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex() + 1, term, entries[i].getEntry(), entries[i].getClientID(), entries[i].getRequestID());
+
+				lastLogEntry = new LogEntry(lastLogEntry.getLogIndex() + 1, term,
+						entries[i].getEntry(), entries[i].getClientID(), entries[i].getRequestID());
+				lastLogEntry.setCommited(entries[i].isCommited());
 
 				indexes2Commit[i] = lastLogEntry.getLogIndex();
 				logFile.writeBytes(lastLogEntry.toString());
 			}
 		} catch (IOException e) {
-			System.err.println("Log file not found!");
 			e.printStackTrace();
 		}
 		return indexes2Commit;
@@ -116,9 +118,9 @@ public class LogHandler {
 	/**
 	 * Set a specific logEntry to committed
 	 */
-	public boolean commitLogEntry(int logEntryIndex){
+	public String commitLogEntry(int logEntryIndex){
 		if (logEntryIndex > lastLogEntry.getLogIndex()) {
-			return false;
+			return "invalid_index";
 		}
 
 		try {
@@ -128,30 +130,30 @@ public class LogHandler {
 			}
 			long pointer = logFile.getFilePointer();
 			String line = logFile.readLine();
-			if (line.length() < 1) {
-				return false;
+			
+			if (line != null && line.length() < 1) {
+				return "no_content";
 			}
 
 			StringBuilder sb = new StringBuilder(line);
-			
+
 			int lastDelimiter = sb.lastIndexOf(LogEntry.SPLITTER);
 			sb.replace(lastDelimiter + 1, sb.length(), "true ");
 
 			logFile.seek(pointer);
 			logFile.writeBytes(sb.toString());
 
-			return true;
+			return new LogEntry(line).getCommand();
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
-
-		return false;
+		return "exception";
 	}
 
 	public void findLastLogEntry() {
 		String line = null;
 		lastLogEntry = new LogEntry();
-		if(!isLogEmpty()){
+		if (!isLogEmpty()) {
 			try {
 				logFile.seek(0);
 				while ((line = logFile.readLine()) != null) {
@@ -160,7 +162,6 @@ public class LogHandler {
 			} catch (IOException e) {
 				System.err.println("Log file not found!");
 			}
-
 		}
 	}
 
@@ -239,24 +240,32 @@ public class LogHandler {
 	}
 
 	/**
-	 * Remove all entrys after index (index excluded) until EOF
+	 * Remove all entries after index (index excluded) until EOF
 	 */
-	public void removeEntrysAfterIndex(int logIndex)  {
+	public void removeEntriesAfterIndex(int logIndex)  {
 		if (logIndex > 0) {
+			findLastLogEntry();
+
+			int lastLogIndex = lastLogEntry.getLogIndex();
+			int size2Keep = lastLogIndex < logIndex ? lastLogIndex : logIndex;
+
 			try {
 				logFile.seek(0);
 				StringBuilder sb = new StringBuilder();
 
-				for (int i = 0; i < logIndex; i++) {
+				for (int i = 0; i < size2Keep; i++) {
 					sb.append(logFile.readLine() + "\n");
 				}
-				sb.deleteCharAt(sb.lastIndexOf("\n"));
+
+				if (sb.lastIndexOf("\n") > -1)
+					sb.deleteCharAt(sb.lastIndexOf("\n"));
+
 				logFile.setLength(0);
 				logFile.writeBytes(sb.toString());
 			} catch (IOException e) {
 				System.err.println("Log file not found!");
 			}
-			
+
 		}
 	}
 

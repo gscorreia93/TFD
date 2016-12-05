@@ -104,7 +104,7 @@ public class ServerThreadPool {
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("RequestVoteRequest: Failed to connect to "+server.getAddress()+":"+server.getPort()+"\tRetrying...");
+							System.err.println("RequestVoteRequest: Failed to connect to " + server.getAddress() + ":" + server.getPort() + "\tRetrying...");
 						}
 
 					} else if (rq.getClass() == AppendEntriesRequest.class) {
@@ -127,7 +127,7 @@ public class ServerThreadPool {
 							}
 
 						} catch (RemoteException e) {
-							System.err.println("AppendEntriesRequest: Failed to connect to " + server.getAddress()+":"+server.getPort()+"\tRetrying...");
+							System.err.println("AppendEntriesRequest: Failed to connect to " + server.getAddress() + ":" + server.getPort() + "\tRetrying...");
 						}
 					}
 

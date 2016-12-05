@@ -14,6 +14,7 @@ import java.util.Queue;
 
 import server.library.log.LogEntry;
 import server.library.log.LogHandler;
+import server.library.statemachine.StateMachine;
 
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
 
@@ -26,10 +27,13 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 	private Server server;
 	private ElectionHandler eh;
-	private ServerThreadPool serverThreadPool;
+	private LogHandler logHandler;
+
+	private StateMachine stateMachine;
+
 	private Queue<Entry> entryQueue;
 	private Queue<Entry> commitQueue;
-	private LogHandler logHandler;
+	private ServerThreadPool serverThreadPool;
 
 	private int leaderID;
 
@@ -39,6 +43,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		raftServers = new RAFTServers();
 		entryQueue = new LinkedList<Entry>();
 		commitQueue = new LinkedList<Entry>();
+		stateMachine = new StateMachine();
 	}
 
 	public void openConnection() {
@@ -53,11 +58,11 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			// Starts the log handler
 			logHandler = new LogHandler("LOG_" + server.getAddress() + "_" + server.getPort());
-			
+
 			eh = new ElectionHandler(server, raftServers, serverThreadPool, entryQueue, commitQueue, logHandler);
 			eh.startElectionHandler();
 
-			
+
 
 		} else {
 			System.err.println("Incorrect server configuration, server not starting");
@@ -139,7 +144,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 						lastLog.setLastCommitedIndex(lastCommitedLog.getLogIndex());
 					}
 					eh.setLastLog(lastLog);
-					
+
 					int[] indexes2Commit = logHandler.writeLogEntries(entries, eh.getTerm());
 
 					// adiciona as entries ah queue para serem despachadas quando tiverem tempo de processamento
@@ -164,6 +169,15 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					while (totalVoteCount < quorum && (voteSuccess < quorum)) {  
 						for (Response element : responseQueue) {
 
+							if (element.isLogDeprecated()) {
+								element.resetLogDeprecated();
+								elements.add(element);
+
+								// If a log is deprecated, continues until is synchronized
+								handleDeprecatedLog(element, leaderId, servers);
+								continue;
+							}
+
 							if (element.getRequestID().equals(entries[0].getRequestID())) {
 								if (element.isSuccessOrVoteGranted()) {
 									voteSuccess++;
@@ -173,40 +187,16 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 							}
 						}
 					}
-									
-					
+
 					// Removes the received responses from the current request
 					for (Response e: elements) {
-						//Se a resposta eh de um follower que esta deprecated
-						if (e.isLogDeprecated()){
-							List<LogEntry> logEntry = logHandler.getAllEntriesAfterIndex(e.getLastLogIndex());
-							Entry [] entriesOfLog = new Entry[logEntry.size()];
-							for (int i = 0; i < entriesOfLog.length; i++) {
-								System.out.println(logEntry.get(i));
-								entriesOfLog[i] = logEntry.get(i).convertToEntry();
-								System.out.println(entriesOfLog[i]);
-							}
-							try {
-								servers.get(e.getServerID()-1).getRequestQueue().put(new AppendEntriesRequest(term, leaderId, e.getLastLogIndex(), e.getLastLogTerm(),entriesOfLog, 0));
-							} catch (InterruptedException e1) {
-								// TODO Auto-generated catch block
-								e1.printStackTrace();
-							}
-							System.out.println(e.getServerID());
-						}
 						responseQueue.remove(e);
-					
 					}
 
 					if (voteSuccess >= quorum) {
-						response = new Response(eh.getTerm(), true);
+						response = handleSuccessAppendEntry(indexes2Commit, entries);
 					} else {	
 						response = new Response(eh.getTerm(), false);
-					}
-
-					for (int i: indexes2Commit) {
-						logHandler.commitLogEntry(i);
-						commitQueue.add(new Entry(i));
 					}
 
 				} else {
@@ -216,10 +206,12 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 			// Commits a log in all servers
 		} else if (term == COMMIT_LOG) {
-			System.out.println("COMMIT_LOG " + server.getServerID() + " with " + entries.length + " entries");
-
 			for (Entry entry: entries) {
-				logHandler.commitLogEntry(entry.getCommitedIndex());
+				String command = logHandler.commitLogEntry(entry.getCommitedIndex());
+
+				System.out.println("COMMIT_LOG " + command);
+
+				stateMachine.execute(command);
 			}
 
 			// When a follower receives a request to appendEntries
@@ -228,9 +220,9 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			leaderID = leaderId;
 
 			if (entries != null && entries.length != 0) {
-				System.out.println("term: " + term + "\nleaderID: " + leaderId
-						+ "\nprevLogIndex: " + prevLogIndex + "\nprevLogTerm: " + prevLogTerm
-						+ "\nleaderCommit: " + leaderCommit);
+				System.out.println("term: " + term + ", leaderID: " + leaderId
+						+ ", prevLogIndex: " + prevLogIndex + "\nprevLogTerm: " + prevLogTerm
+						+ ", leaderCommit: " + leaderCommit);
 
 				response = logHandler.followerReplication(term, leaderId, 
 						prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
@@ -250,5 +242,46 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		}
 
 		return response;
+	}
+
+	/**
+	 * Executes the commands in the state machine
+	 * @return output of the commands back to the client
+	 */
+	private Response handleSuccessAppendEntry(int[] indexes2Commit, Entry[] entries) {
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < entries.length; i++) {
+			sb.append(stateMachine.execute(entries[i].getEntry()) + (i + 1 < entries.length ? "\n" : ""));
+		}
+
+		// Only commits if the response is successful
+		for (int i: indexes2Commit) {
+			logHandler.commitLogEntry(i);
+			commitQueue.add(new Entry(i));
+		}
+
+		return new Response(eh.getTerm(), sb.toString());
+	}
+
+	/**
+	 * Sends a request to a server that is deprecated
+	 * with the updated logs
+	 */
+	private void handleDeprecatedLog(Response e, int leaderId, List<Server> servers) {
+		List<LogEntry> logEntry = logHandler.getAllEntriesAfterIndex(e.getLastLogIndex());
+
+		Entry [] entriesOfLog = new Entry[logEntry.size()];
+		for (int i = 0; i < entriesOfLog.length; i++) {
+			entriesOfLog[i] = logEntry.get(i).convertToEntry();
+		}
+
+		try {
+			AppendEntriesRequest ar = new AppendEntriesRequest(eh.getTerm(), leaderId,
+					e.getLastLogIndex(), e.getLastLogTerm(), entriesOfLog, 0);
+
+			servers.get(e.getServerID() - 1).getRequestQueue().put(ar);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+		}
 	}
 }

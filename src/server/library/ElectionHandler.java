@@ -24,23 +24,23 @@ public class ElectionHandler {
 	private Queue<Entry> entryQueue;
 	private Queue<Entry> commitQueue;
 	private LogEntry lastLog;
-	private LogHandler logHandler;
 	
 	private ScheduledExecutorService sEs;
 	Set<Integer> termVotes = new HashSet<>();
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers, ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue, LogHandler logHandler) {
+	public ElectionHandler(Server candidateServer, RAFTServers raftServers,
+			ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue, LogHandler logHandler) {
+		
 		this.candidateServer = candidateServer;
 		this.raftServers = raftServers;
 		this.serverThreadPool = serverThreadPool;
 		this.entryQueue = entryQueue;
 		this.commitQueue = commitQueue;
-		this.logHandler = logHandler;
 		
 		if (!logHandler.isLogEmpty()){
 			lastLog = logHandler.getLastCommitedLogEntry();
 			term = lastLog.getLogTerm();
-			System.out.println("UPDATE TERM TO "+term);
+			System.out.println("UPDATE TERM TO " + term);
 		}
 		
 	}
@@ -174,7 +174,7 @@ public class ElectionHandler {
 									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), 0, 0, entries, 0);
 								} else {
 									aR = new AppendEntriesRequest(term, candidateServer.getServerID(), lastLog.getLogIndex(), lastLog.getLogTerm(), entries, lastLog.getLastCommitedIndex());
-									//lastLog = null;
+									// lastLog = null;
 								}
 								if (!bq.contains(aR)) {
 									bq.add(aR);

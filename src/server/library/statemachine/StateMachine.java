@@ -3,11 +3,13 @@ package server.library.statemachine;
 import java.util.ArrayList;
 import java.util.List;
 
-import server.library.Response;
-
 public class StateMachine implements IService {
 
-	List<Operation> operations = new ArrayList<>();
+	List<Operation> operations;
+
+	public StateMachine() {
+		operations = new ArrayList<>();
+	}
 
 	@Override
 	public String execute(String op) {
@@ -39,7 +41,9 @@ public class StateMachine implements IService {
 		if (command.equals("cas")) {
 			System.err.println("not implemented");
 		}
-		return new String();
+
+		// else
+		return command;
 	}
 
 	private StringBuilder list() {
@@ -151,4 +155,4 @@ for (int i = 0; i < entries.length; i++) {
 	result.append(stateMachine.execute(entries[i].getEntry()) + "\n");
 }
 response = new Response(eh.getTerm(), result.toString());
-*/
+ */

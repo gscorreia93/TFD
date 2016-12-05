@@ -67,10 +67,18 @@ public class Response implements Serializable{
 	}
 
 	public boolean isLogDeprecated() {
-		return denyCause == LOG_DEPRECATED;
+		return this.denyCause == LOG_DEPRECATED;
 	}
 	public void setLogDeprecated() {
-		denyCause = LOG_DEPRECATED;
+		this.denyCause = LOG_DEPRECATED;
+	}
+
+	/**
+	 * Resets the log deprecated and requestID
+	 */
+	public void resetLogDeprecated() {
+		this.denyCause = 0;
+		this.requestID = "null";
 	}
 
 	public int getLastLogTerm() {

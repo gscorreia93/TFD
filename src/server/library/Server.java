@@ -62,10 +62,15 @@ public class Server {
 	}
 
 	public void setState(ServerState newState){
-		System.out.println(address+":"+port+" is now "+newState);
+		System.out.println(address + ":" + port + " is now " + newState);
 		this.state = newState;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "serverID: " + serverID + ", " + address + ":" + port;
+	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)

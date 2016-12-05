@@ -45,7 +45,6 @@ public class ClientLibrary {
 
 	public boolean request(String clientID, String command) {
 
-		String message = null;
 		String requestID = UUID.randomUUID().toString();
 		Entry[] entries = new Entry[] {new Entry(clientID, requestID, command)};
 
@@ -68,7 +67,7 @@ public class ClientLibrary {
 				}
 				sentToLeader = true;
 			} catch (RemoteException e) {
-				//o servidor da ligação crashou
+				//o servidor da ligaï¿½ï¿½o crashou
 				System.err.println("Failed to receive response from server\nTrying another server...");
 				connectToServer(clientID);
 			} catch (Exception e) {

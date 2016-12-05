@@ -20,7 +20,7 @@ public class LogEntry {
 	}
 	
 	public LogEntry(String logEntry) {
-		String[] logParts = logEntry.split("\\"+SPLITTER);
+		String[] logParts = logEntry.split("\\" + SPLITTER);
 		logIndex = Integer.parseInt(logParts[0]);
 		logTerm = Integer.parseInt(logParts[1]);
 		command = logParts[2];

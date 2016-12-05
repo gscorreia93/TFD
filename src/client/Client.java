@@ -72,14 +72,12 @@ public class Client {
 
 	private static void help() {
 		System.out.println("");
-		System.out.println("Available commands:");
+		System.out.println("Available commands (q to quit, h to help):");
 		System.out.println("list \t Lists the available contents");
 		System.out.println("get i \t Gets an entry at index i");
 		System.out.println("del i \t Deletes an entry at index i");
 		System.out.println("put e \t Adds an entry e");
 		System.out.println("cas \t ?");
-		System.out.println("q \t quit");
-		System.out.println("h \t help");
 		System.out.println("-------------------------------------");
 	}
 }
