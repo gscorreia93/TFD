@@ -39,7 +39,7 @@ public class StateMachine implements IService {
 		}
 
 		if (command.equals("cas")) {
-			System.err.println("not implemented");
+			return cas(parts[1], parts[2], parts[3]);
 		}
 
 		// else
@@ -75,7 +75,7 @@ public class StateMachine implements IService {
 
 		if (index > -1) {
 			if (index >= operations.size()) {
-				return "Item doesn't exist";
+				return "There is no item at " + index;
 			}
 			return operations.get(index).getOp();
 
@@ -101,10 +101,7 @@ public class StateMachine implements IService {
 
 		if (index > -1) {
 			if (index >= operations.size()) {
-				return "Item doesn't exist";
-			}
-			if (index >= operations.size()) {
-				return "Item doesn't exist";
+				return "There is no item at " + index;
 			}
 			result = operations.get(index).getOp();
 
@@ -126,6 +123,30 @@ public class StateMachine implements IService {
 		return "'" + result + "' successfully deleted!";
 	}
 
+	private String cas(String pos, String arg1, String arg2) {
+		int index = -1;
+		try {
+			index = Integer.parseInt(pos);
+		} catch (NumberFormatException e) { }
+
+		String result = "";
+
+		if (index > -1) {
+			if (index >= operations.size()) {
+				return "There is no item at " + index;
+			}
+			result = operations.get(index).getOp();
+
+			if (result.equals(arg1)) {
+				operations.get(index).setOp(arg2);
+				return "'" + arg1 + "' was replaced by " + arg2;
+			} else {
+				return "'" + index + ": " + result + "' is different than " + arg1;
+			}
+		}
+		return "'" + arg1 + "' was't found at " + pos;
+	}
+
 	private class Operation {
 		int index;
 		String op;
@@ -138,6 +159,9 @@ public class StateMachine implements IService {
 		String getOp() {
 			return op;
 		}
+		void setOp(String op) {
+			this.op = op;
+		}
 
 		void setIndex(int i) {
 			this.index= i;
@@ -148,11 +172,3 @@ public class StateMachine implements IService {
 		}
 	}
 }
-
-/**
-StringBuilder result = new StringBuilder();
-for (int i = 0; i < entries.length; i++) {
-	result.append(stateMachine.execute(entries[i].getEntry()) + "\n");
-}
-response = new Response(eh.getTerm(), result.toString());
- */

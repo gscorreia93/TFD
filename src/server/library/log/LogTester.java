@@ -9,7 +9,7 @@ public class LogTester {
 
 	public static void main(String[] args) throws IOException {
 		
-		LogHandler logHandler = new LogHandler("LOG_localhost_8082");
+	//	LogHandler logHandler = new LogHandler("LOG_localhost_8082");
 	//	System.out.println("hasEntry? "+ logHandler.hasEntry(0, 0));
 	//	System.out.println("Empty? "+ logHandler.isLogEmpty());
 	//	System.out.println("n linhas: "+logHandler.getCurrentLogIndex());

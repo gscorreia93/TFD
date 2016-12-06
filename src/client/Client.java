@@ -61,9 +61,11 @@ public class Client {
 			return true;
 		}
 		
-		if (command.equals("cas")) {
-			System.err.println("not implemented");
-			return false;
+		if (command.equals("cas") && parts.length == 4) {
+			try {
+				Integer.parseInt(parts[1]);
+				return true;
+			} catch (NumberFormatException e) { }
 		}
 		
 		System.err.println("Invalid command");
@@ -72,12 +74,12 @@ public class Client {
 
 	private static void help() {
 		System.out.println("");
-		System.out.println("Available commands (q to quit, h to help):");
-		System.out.println("list \t Lists the available contents");
-		System.out.println("get i \t Gets an entry at index i");
-		System.out.println("del i \t Deletes an entry at index i");
-		System.out.println("put e \t Adds an entry e");
-		System.out.println("cas \t ?");
-		System.out.println("-------------------------------------");
+		System.out.println("Available commands \t (q to quit, h for help):");
+		System.out.println("list \t\t\t Lists the available contents");
+		System.out.println("get i \t\t\t Gets an entry at index i");
+		System.out.println("del i \t\t\t Deletes an entry at index i");
+		System.out.println("put e \t\t\t Adds an entry e");
+		System.out.println("cas i e r \t\t Replaces at i by r when get i = e");
+		System.out.println("----------------------------------------------------------");
 	}
 }

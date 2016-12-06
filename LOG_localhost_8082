@@ -1,17 +1,5 @@
-1|12|list|696df49|dc57d52f-4a12-4faf-924c-81aea83a80e7|true 
-2|12|put a|696df49|26843737-e689-49a7-8413-304b338fdaba|true 
-3|12|put b|696df49|a2dc85df-4e74-474f-9c1a-b30d54de9e17|true 
-4|12|list|696df49|aa77befc-1efe-4aff-9ade-f9023d9ccf3d|true 
-5|18|asd|696df49|2ac2a843-1503-401d-a34f-53ff06ce6c68|true 
-6|18|put c|696df49|f02360d8-38cf-4b48-87a1-c41c0ced3e83|true 
-7|18|put z|696df49|18aab085-8144-4262-94e8-d51e4be78183|true 
-8|18|put d|696df49|430b758b-ed61-4de6-af06-d49e1e93c019|true 
-9|18|shniztel|696df49|5ed81e69-be19-4684-8ca8-5c16276a5470|true 
-10|18|put e|696df49|2a51e766-ba23-4f4c-bb1b-831ee714c26d|true 
-11|18|get z|696df49|cea240a1-52e0-4673-99cd-c821938ba27f|true 
-12|31|list|696df49|5fb3fc24-39ea-4b9a-aa67-06d93bc4b377|true 
-13|37|list|696df49|2e4716cc-9f9d-4cc9-8841-1d0d4e0c3041|false
-14|60|list|c0370a0|7e27b389-5bb8-4709-83b0-f44b8e7e9846|true 
-15|73|del z|c0370a0|91f0d9b2-959d-4621-9209-59d8950f2f7e|true 
-16|155|list|c0370a0|b030dccc-6dcd-494f-9030-d9381c8f6d66|false
-17|229|list|696df49|b730daf6-7757-48f4-a8e8-251f1abf997f|true 
+1|5|put a|810786b|4b9ac791-7d0d-403c-913f-067cffce8122|true 
+2|5|cas 0 b c|810786b|5fad3c8c-de3c-45bb-9fbd-9baf1cd3cade|true 
+3|5|cas 1 a s|810786b|b5e4ad54-d72c-4d54-8946-a91731edf014|true 
+4|9|cas 0 a b|810786b|e7630703-4ced-409b-b789-7530067a1cd5|true 
+5|11|list|810786b|efc20734-35c9-45bc-8391-4c155c4079fa|true 

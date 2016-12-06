@@ -32,6 +32,7 @@ public class LogHandler {
 		} else {
 			System.err.println("LogFile already exist");
 		}
+
 		try {
 			logFile = new RandomAccessFile(fileLog, "rw");
 		} catch (FileNotFoundException e) {
@@ -52,23 +53,16 @@ public class LogHandler {
 	 * If leaderCommit > commitIndex, set commitIndex =
 	 * 	min(leaderCommit, index of last new entry)
 	 * 
-	 * @return
-	 * 1. false if term < currentTerm (�5.1)
-	 * 2. false if log doesn�t contain an entry at prevLogIndex
-	 * 		whose term matches prevLogTerm (�5.3)
+	 * @return false if log doesn't contain an 
+	 *   entry at prevLogIndex whose term matches prevLogTerm (�5.3)
 	 */
-	public Response followerReplication(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit, int thisTerm) {
+	public Response followerReplication(int term, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) {
 
 		Response response;
 		String requestID = entries.length > 0 ? entries[entries.length - 1].getRequestID() : "NOT_FOUND";
 
-		if (thisTerm < term) {
-			// TODO if (thisTerm < term) update term
-		}
-		System.out.println(prevLogIndex + " " + prevLogTerm + " = " + hasEntry(prevLogIndex, prevLogTerm));
-
 		if (!hasEntry(prevLogIndex, prevLogTerm)) {
-			System.out.println("DEPRECATED");
+			System.out.println("DEPRECATED: " + prevLogIndex + " & " + prevLogTerm);
 
 			// If an existing entry conflicts with a new one (same index but 
 			// different terms), delete the existing entry and all that follow it (�5.3)
@@ -76,7 +70,7 @@ public class LogHandler {
 
 			LogEntry lastLog = getLastLogEntry();
 
-			response = new Response(thisTerm, false);
+			response = new Response(term, false);
 			response.setLogDeprecated();
 			response.setRequestID(requestID);
 			response.setLastLogTerm(lastLog.getLogTerm());
@@ -86,7 +80,7 @@ public class LogHandler {
 
 		writeLogEntries(entries, term);
 
-		response = new Response(thisTerm, true);
+		response = new Response(term, true);
 		response.setRequestID(requestID);
 		return response;
 	}
@@ -130,7 +124,7 @@ public class LogHandler {
 			}
 			long pointer = logFile.getFilePointer();
 			String line = logFile.readLine();
-			
+
 			if (line != null && line.length() < 1) {
 				return "no_content";
 			}
@@ -150,7 +144,7 @@ public class LogHandler {
 		return "exception";
 	}
 
-	public void findLastLogEntry() {
+	private void findLastLogEntry() {
 		String line = null;
 		lastLogEntry = new LogEntry();
 		if (!isLogEmpty()) {
@@ -205,6 +199,7 @@ public class LogHandler {
 	public LogEntry getLastLogEntry() {
 		return lastLogEntry;
 	}
+
 	/**
 	 * Check if log file is empty
 	 */
@@ -220,7 +215,7 @@ public class LogHandler {
 	/**
 	 * Check if Entry with logIndex on logTerm exists in log file
 	 */
-	public boolean hasEntry(int logIndex, int logTerm)  {
+	private boolean hasEntry(int logIndex, int logTerm)  {
 		if (isLogEmpty() && logIndex == 0 && logTerm == 0) {
 			return true;
 		}
@@ -242,7 +237,7 @@ public class LogHandler {
 	/**
 	 * Remove all entries after index (index excluded) until EOF
 	 */
-	public void removeEntriesAfterIndex(int logIndex)  {
+	private void removeEntriesAfterIndex(int logIndex)  {
 		if (logIndex > 0) {
 			findLastLogEntry();
 
@@ -265,7 +260,6 @@ public class LogHandler {
 			} catch (IOException e) {
 				System.err.println("Log file not found!");
 			}
-
 		}
 	}
 
@@ -295,7 +289,6 @@ public class LogHandler {
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
-
 		return null;	
 	}
 }

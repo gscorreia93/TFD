@@ -14,8 +14,14 @@ import java.util.Queue;
 
 import server.library.log.LogEntry;
 import server.library.log.LogHandler;
+import server.library.statemachine.IService;
 import server.library.statemachine.StateMachine;
 
+/**
+ * Class that handles the requests from:
+ * - clients to leader
+ * - leader to followers
+ */
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
 
 	private static final long serialVersionUID = 1L;
@@ -29,7 +35,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	private ElectionHandler eh;
 	private LogHandler logHandler;
 
-	private StateMachine stateMachine;
+	private IService stateMachine;
 
 	private Queue<Entry> entryQueue;
 	private Queue<Entry> commitQueue;
@@ -46,6 +52,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		stateMachine = new StateMachine();
 	}
 
+	/** 
+	 * Starts the server and the threads to 
+	 * communicate with other servers.
+	 */
 	public void openConnection() {
 		server = startServer(raftServers.getServers());
 
@@ -62,14 +72,15 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			eh = new ElectionHandler(server, raftServers, serverThreadPool, entryQueue, commitQueue, logHandler);
 			eh.startElectionHandler();
 
-
-
 		} else {
 			System.err.println("Incorrect server configuration, server not starting");
 			System.exit(-1);
 		}
 	}
 
+	/**
+	 * Starts this server to start awaiting for requests.
+	 */
 	private Server startServer(List<Server> servers) {
 		if (servers == null || servers.isEmpty()) {
 			System.err.println("There are no more available servers to connect");
@@ -78,15 +89,16 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 
 		for (Server server : servers) {
 			try {
-				if (server.getAddress().equals(InetAddress.getLocalHost().getHostAddress()) || server.getAddress().equals("localhost") || server.getAddress().equals("127.0.0.1")){
+				if (server.getAddress().equals(InetAddress.getLocalHost().getHostAddress())
+						|| server.getAddress().equals("localhost") || server.getAddress().equals("127.0.0.1")) {
+
 					Registry registry = LocateRegistry.createRegistry(server.getPort());
 					registry.bind("ServerHandler", this);
-					System.out.println(server.getAddress()+":"+server.getPort()+" started!");
+
+					System.out.println(server.getAddress() + ":" + server.getPort() + " started!");
 					return server;
 				}
-			} catch (RemoteException e) {
-				System.err.println(server.getPort() + " already bounded, trying another port.");
-			} catch (AlreadyBoundException e) {
+			} catch (RemoteException | AlreadyBoundException e) {
 				System.err.println(server.getPort() + " already bounded, trying another port.");
 			} catch (UnknownHostException e) {
 				e.printStackTrace();
@@ -95,8 +107,10 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return null;
 	}
 
+	/**
+	 * Handles the requestVote from other servers.
+	 */
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
-
 		Response response = new Response(eh.getTerm(), false);
 
 		if (term > eh.getTerm()) {
@@ -108,7 +122,6 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			serverThreadPool.purgeQueues();
 
 			if (!eh.isFollower() && candidateID != server.getServerID()) {
-
 				eh.setServerState(ServerState.FOLLOWER);
 			}
 			response = new Response(eh.getTerm(), true);
@@ -125,6 +138,9 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		return response;
 	}
 
+	/**
+	 * Handles the requestVote from clientes and other servers.
+	 */
 	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
 
@@ -217,15 +233,15 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 			// When a follower receives a request to appendEntries
 		} else {  
 
+			if (eh.getTerm() < term) {
+				eh.setTerm(term);
+			}
+
 			leaderID = leaderId;
 
 			if (entries != null && entries.length != 0) {
-				System.out.println("term: " + term + ", leaderID: " + leaderId
-						+ ", prevLogIndex: " + prevLogIndex + "\nprevLogTerm: " + prevLogTerm
-						+ ", leaderCommit: " + leaderCommit);
-
-				response = logHandler.followerReplication(term, leaderId, 
-						prevLogIndex, prevLogTerm, entries, leaderCommit, eh.getTerm());
+				response = logHandler.followerReplication(term, 
+						prevLogIndex, prevLogTerm, entries, leaderCommit);
 			}
 
 			if (server.getState() != ServerState.FOLLOWER){
