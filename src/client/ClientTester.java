@@ -1,6 +1,7 @@
 package client;
 
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import client.library.ClientLibrary;
 
@@ -10,13 +11,18 @@ public class ClientTester extends Thread{
 	private ClientLibrary cl;
 	private int messageNumber;
 	private int timeBetweenRequests;
+	private static AtomicInteger checkpointValue = new AtomicInteger(0);
+	private int checkpoint;
+	private int numberOfThreads;
 	
-	public ClientTester(String clientID, ClientLibrary cl, int messageNumber, int timeBetweenRequests){
+	public ClientTester(String clientID, ClientLibrary cl, int messageNumber, int timeBetweenRequests, int checkpoint, int numberOfThreads){
 		
 		this.clientID = clientID;
 		this.cl = cl;
 		this.messageNumber = messageNumber;
 		this.timeBetweenRequests = timeBetweenRequests;
+		this.checkpoint = checkpoint;
+		this.numberOfThreads = numberOfThreads;
 	}
 	
 	protected void connectToServer(){
@@ -46,11 +52,24 @@ public class ClientTester extends Thread{
 				    Thread.currentThread().interrupt();
 				}
 				
+				if(checkpoint == 1){
+					
+					synchronized (checkpointValue) {
+						checkpointValue.incrementAndGet();
+					}
+					
+					while(checkpointValue.intValue() < numberOfThreads);
+				}
+				
 				
 				cl.request(clientID, entry);
 				messageNumber--;
 				
-				System.out.println(messageNumber);
+				if(checkpoint == 1){
+					synchronized (checkpointValue) {
+						checkpointValue.decrementAndGet();
+					}
+				}
 			}
 			
 			System.out.println("ENDED " + this.getName());
