@@ -31,13 +31,10 @@ public class Client {
 					continue;
 				}
 
-				// To avoid validations on quick tests
-				c.request(clientID, entry);
-				
 				// Uncomment for the delivery
-				// if (entryIsValid(entry)) {
-					// c.request(clientID, entry);
-				// }
+				if (entryIsValid(entry)) {
+					c.request(clientID, entry);
+				}
 			}
 
 			System.out.println(clientID + " terminated");
@@ -55,19 +52,19 @@ public class Client {
 
 		String parts[] = entry.split(" ");
 		String command = parts[0].toLowerCase();
-		
+
 		if ((command.equals("get") || command.equals("put")
 				|| command.equals("del")) && parts.length == 2) {
 			return true;
 		}
-		
+
 		if (command.equals("cas") && parts.length == 4) {
 			try {
 				Integer.parseInt(parts[1]);
 				return true;
 			} catch (NumberFormatException e) { }
 		}
-		
+
 		System.err.println("Invalid command");
 		return false;
 	}

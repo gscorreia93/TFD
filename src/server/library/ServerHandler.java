@@ -145,7 +145,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // FROM CLIENT
-			
+
 			if (server.getState() != ServerState.LEADER) { // NOT LEADER
 				System.err.println("Redirecting to Leader (" + leaderID + ")" );
 				response = new Response(-1, false);
@@ -197,14 +197,8 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 									responseQueue.remove(element);
 								}
 								totalVoteCount++;
-								elements.add(element);
 							}
 						}
-					}
-
-					// Removes the received responses from the current request
-					for (Response e: elements) {
-						responseQueue.remove(e);
 					}
 
 					if (voteSuccess >= quorum) {
