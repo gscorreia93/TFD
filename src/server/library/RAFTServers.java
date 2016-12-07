@@ -25,8 +25,8 @@ public class RAFTServers {
 	}
 
 	private void loadServers() {
-		Queue<Response> voteQueue =  new ArrayBlockingQueue<Response>(20);
-		Queue<Response> responseQueue = new ArrayBlockingQueue<Response>(20);
+		Queue<Response> voteQueue =  new ArrayBlockingQueue<Response>(40);
+		Queue<Response> responseQueue = new ArrayBlockingQueue<Response>(1000);
 
 		BufferedReader br;
 		try {

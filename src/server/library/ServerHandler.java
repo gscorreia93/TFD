@@ -141,17 +141,17 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	/**
 	 * Handles the requestVote from clientes and other servers.
 	 */
-	public Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
+	public synchronized Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // FROM CLIENT
-
+			
 			if (server.getState() != ServerState.LEADER) { // NOT LEADER
 				System.err.println("Redirecting to Leader (" + leaderID + ")" );
 				response = new Response(-1, false);
 				response.setLeaderID(leaderID);
 
-			} else {  // LEADER
+			} else {  // LEADER				
 				if (entries != null && entries.length != 0) {
 					LogEntry lastLog = logHandler.getLastLogEntry();
 					LogEntry lastCommitedLog = logHandler.getLastCommitedLogEntry();
@@ -176,15 +176,12 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 					int voteSuccess = 0;
 					int totalVoteCount = 0;
 
-					System.out.println(entries[0].getClientID() + " says '" + entries[0].getEntry() + "'");
-
 					// Stores the entries to remove them from the responseQueue
 					List<Response> elements = new ArrayList<>();
 
 					//por cada entry vai percorrer a queue ah procura das respostas dessa entry
-					while (totalVoteCount < quorum && (voteSuccess < quorum)) {  
+					while (totalVoteCount < quorum && (voteSuccess < quorum)) {  	
 						for (Response element : responseQueue) {
-
 							if (element.isLogDeprecated()) {
 								element.resetLogDeprecated();
 								elements.add(element);
@@ -197,6 +194,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 							if (element.getRequestID().equals(entries[0].getRequestID())) {
 								if (element.isSuccessOrVoteGranted()) {
 									voteSuccess++;
+									responseQueue.remove(element);
 								}
 								totalVoteCount++;
 								elements.add(element);
