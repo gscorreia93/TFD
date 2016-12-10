@@ -82,6 +82,7 @@ public class LogHandler {
 
 		response = new Response(term, true);
 		response.setRequestID(requestID);
+		
 		return response;
 	}
 
@@ -89,6 +90,7 @@ public class LogHandler {
 	 * Writes all entries received on end of log
 	 */
 	public int[] writeLogEntries(Entry[] entries, int logTerm) {
+		
 		int[] indexes2Commit = new int[entries.length];
 		int term = 0;  
 		try {
@@ -106,6 +108,7 @@ public class LogHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		return indexes2Commit;
 	}
 
@@ -113,6 +116,7 @@ public class LogHandler {
 	 * Set a specific logEntry to committed
 	 */
 	public String commitLogEntry(int logEntryIndex){
+		
 		if (logEntryIndex > lastLogEntry.getLogIndex()) {
 			return "invalid_index";
 		}
@@ -141,10 +145,12 @@ public class LogHandler {
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
+		
 		return "exception";
 	}
 
-	private void findLastLogEntry() {
+	protected void findLastLogEntry() {
+		
 		String line = null;
 		lastLogEntry = new LogEntry();
 		if (!isLogEmpty()) {
@@ -162,7 +168,8 @@ public class LogHandler {
 	/**
 	 * Get log index from specific entry
 	 */
-	public int getLogEntryIndex (Entry entry)  {
+	protected int getLogEntryIndex (Entry entry)  {
+		
 		LogEntry searchEntry = null;
 		int countLines=1;
 		String line= null;
@@ -178,6 +185,7 @@ public class LogHandler {
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
+		
 		return 0;
 	}
 
@@ -185,6 +193,7 @@ public class LogHandler {
 	 * Get the last log Entry committed
 	 */
 	public LogEntry getLastCommitedLogEntry() {
+		
 		List<LogEntry> logs;
 		logs = getAllEntriesAfterIndex(0);
 
@@ -197,6 +206,7 @@ public class LogHandler {
 	}
 
 	public LogEntry getLastLogEntry() {
+		
 		return lastLogEntry;
 	}
 
@@ -204,11 +214,13 @@ public class LogHandler {
 	 * Check if log file is empty
 	 */
 	public boolean isLogEmpty() {
+		
 		try {
 			return logFile.length() == 0;
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
+		
 		return false;
 	}
 
@@ -216,6 +228,7 @@ public class LogHandler {
 	 * Check if Entry with logIndex on logTerm exists in log file
 	 */
 	private boolean hasEntry(int logIndex, int logTerm)  {
+		
 		if (isLogEmpty() && logIndex == 0 && logTerm == 0) {
 			return true;
 		}
@@ -231,6 +244,7 @@ public class LogHandler {
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
+		
 		return false;
 	}
 
@@ -238,6 +252,7 @@ public class LogHandler {
 	 * Remove all entries after index (index excluded) until EOF
 	 */
 	private void removeEntriesAfterIndex(int logIndex)  {
+		
 		if (logIndex > 0) {
 			findLastLogEntry();
 
@@ -289,6 +304,7 @@ public class LogHandler {
 		} catch (IOException e) {
 			System.err.println("Log file not found!");
 		}
+		
 		return null;	
 	}
 }

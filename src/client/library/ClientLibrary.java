@@ -18,12 +18,13 @@ import server.library.Response;
 public class ClientLibrary {
 
 	private RemoteMethods stub;
-	private ArrayList<String> servers = null;
+	private ArrayList<String> servers;
 
 	/*
 	 * Connecta-se ao primeiro servidor da lista que tiver online
 	 */
-	public boolean connectToServer(String clientID){
+	public boolean connectToServer(String clientID) {
+		
 		if (servers == null) {
 			readServersFile();
 		}
@@ -37,16 +38,18 @@ public class ClientLibrary {
 			serverAddress = serverData[0];
 			port = Integer.parseInt(serverData[1]);
 
-			if (registryToServer(clientID, serverAddress, port))
+			if (registryToServer(clientID, serverAddress, port)) {
 				return true;
+			}
 		}
+		
 		return false;
 	}
 
 	public boolean request(String clientID, String command) {
 
 		String requestID = UUID.randomUUID().toString();
-		Entry[] entries = new Entry[] {new Entry(clientID, requestID, command)};
+		Entry[] entries = new Entry[] { new Entry(clientID, requestID, command) };
 
 		Response response = null;
 		String[] serverData = null;
@@ -55,19 +58,19 @@ public class ClientLibrary {
 		while (!sentToLeader) {
 			try {
 				response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
-				//fez o pedido a um follower
+				// fez o pedido a um follower
 
 				if (response.getTerm() == -1 && response.isSuccessOrVoteGranted() == false) {
 					System.err.println("Follower :(......Trying Leader...");
 
-					serverData = servers.get(response.getLeaderID()-1).split(":");
+					serverData = servers.get(response.getLeaderID() - 1).split(":");
 					registryToServer(clientID, serverData[0], Integer.parseInt(serverData[1]));
 
 					response = stub.appendEntries(-1, 0, 0, 0, entries, 0);
 				}
 				sentToLeader = true;
 			} catch (RemoteException e) {
-				//o servidor da liga��o crashou
+				// o servidor da ligacao crashou
 				System.err.println("Failed to receive response from server\nTrying another server...");
 				connectToServer(clientID);
 			} catch (Exception e) {
@@ -79,7 +82,7 @@ public class ClientLibrary {
 		boolean success = false;
 		if (response != null) {
 			success = response.isSuccessOrVoteGranted();
-			
+
 			if (success) {
 				System.out.println(response.getResponse());
 			} else {
@@ -93,6 +96,7 @@ public class ClientLibrary {
 	}
 
 	private void readServersFile() {
+		
 		String line = "";
 
 		servers = new ArrayList<String>();
@@ -108,12 +112,12 @@ public class ClientLibrary {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
 	}
 
-	private boolean registryToServer(String clientID, String address, int port){
+	private boolean registryToServer(String clientID, String address, int port) {
+		
 		try {
-			Registry registry = LocateRegistry.getRegistry(address,port);
+			Registry registry = LocateRegistry.getRegistry(address, port);
 			stub = (RemoteMethods) registry.lookup("ServerHandler");
 
 			System.out.println("I'm " + clientID + " -- Connected to " + address + ":" + port);
@@ -123,6 +127,7 @@ public class ClientLibrary {
 		} catch (NotBoundException e) {
 			e.printStackTrace();
 		}
+		
 		return false;
 	}
 }

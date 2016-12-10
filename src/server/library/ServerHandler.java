@@ -25,8 +25,8 @@ import server.library.statemachine.StateMachine;
 public class ServerHandler extends UnicastRemoteObject implements RemoteMethods {
 
 	private static final long serialVersionUID = 1L;
-
-	public static final int COMMIT_LOG = -2;
+	
+	protected static final int COMMIT_LOG = -2;
 	private final int CLIENT_REQUEST = -1;
 
 	private RAFTServers raftServers;
@@ -82,6 +82,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	 * Starts this server to start awaiting for requests.
 	 */
 	private Server startServer(List<Server> servers) {
+		
 		if (servers == null || servers.isEmpty()) {
 			System.err.println("There are no more available servers to connect");
 			return null;
@@ -111,6 +112,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	 * Handles the requestVote from other servers.
 	 */
 	public synchronized Response requestVote(int term, int candidateID, int lastLogIndex, int lastLogTerm) throws RemoteException {
+		
 		Response response = new Response(eh.getTerm(), false);
 
 		if (term > eh.getTerm()) {
@@ -142,6 +144,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	 * Handles the requestVote from clientes and other servers.
 	 */
 	public synchronized Response appendEntries(int term, int leaderId, int prevLogIndex, int prevLogTerm, Entry[] entries, int leaderCommit) throws RemoteException {
+		
 		Response response = null;
 
 		if (term == CLIENT_REQUEST) { // FROM CLIENT
@@ -257,6 +260,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	 * @return output of the commands back to the client
 	 */
 	private Response handleSuccessAppendEntry(int[] indexes2Commit, Entry[] entries) {
+		
 		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < entries.length; i++) {
 			sb.append(stateMachine.execute(entries[i].getEntry()) + (i + 1 < entries.length ? "\n" : ""));
@@ -276,6 +280,7 @@ public class ServerHandler extends UnicastRemoteObject implements RemoteMethods 
 	 * with the updated logs
 	 */
 	private void handleDeprecatedLog(Response e, int leaderId, List<Server> servers) {
+		
 		List<LogEntry> logEntry = logHandler.getAllEntriesAfterIndex(e.getLastLogIndex());
 
 		Entry [] entriesOfLog = new Entry[logEntry.size()];

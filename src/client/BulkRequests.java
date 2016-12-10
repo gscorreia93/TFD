@@ -32,15 +32,17 @@ public class BulkRequests {
 	}
 	
 	private static String randomCommandGenerator() {
+		
 		Random random = new Random();
 		int option = random.nextInt(5) + 1;
 		switch (option) {
-		case 1: return "list";
-		case 2: return "get " + random.nextInt(10);
-		case 3: return "put " + random.nextInt(10);
-		case 4: return "del " + random.nextInt(10);
-		case 5: return "cas " + random.nextInt(10) + " " + random.nextInt(10) + " " + random.nextInt(10);
+			case 1: return "list";
+			case 2: return "get " + random.nextInt(10);
+			case 3: return "put " + random.nextInt(10);
+			case 4: return "del " + random.nextInt(10);
+			case 5: return "cas " + random.nextInt(10) + " " + random.nextInt(10) + " " + random.nextInt(10);
 		}
+		
 		return "invalid";
 	}
 }

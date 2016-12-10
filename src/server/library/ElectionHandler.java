@@ -24,11 +24,10 @@ public class ElectionHandler {
 	private Queue<Entry> entryQueue;
 	private Queue<Entry> commitQueue;
 	private LogEntry lastLog;
-	
 	private ScheduledExecutorService sEs;
-	Set<Integer> termVotes = new HashSet<>();
+	private Set<Integer> termVotes = new HashSet<>();
 
-	public ElectionHandler(Server candidateServer, RAFTServers raftServers,
+	protected ElectionHandler(Server candidateServer, RAFTServers raftServers,
 			ServerThreadPool serverThreadPool, Queue<Entry> entryQueue, Queue<Entry> commitQueue, LogHandler logHandler) {
 		
 		this.candidateServer = candidateServer;
@@ -46,10 +45,12 @@ public class ElectionHandler {
 	}
 	
 	protected void startElectionHandler() {
+		
 		resetState();
 	}
 	
 	protected boolean hasVotedForTerm(int term) {
+		
 		if (termVotes.contains(term)) {
 			return true;
 		} else {
@@ -59,6 +60,7 @@ public class ElectionHandler {
 	}
 
 	protected void resetState() {
+		
 		if(sEs != null){
 			sEs.shutdownNow();
 		}
@@ -94,6 +96,7 @@ public class ElectionHandler {
 	}
 
 	private void startElection() throws InterruptedException {
+		
 		// First increments the term
 		term++;
 		// Transitions to candidate state
@@ -198,35 +201,38 @@ public class ElectionHandler {
 		}
 	}
 	
-	protected boolean isLeader() {
-		return candidateServer.getState() == ServerState.LEADER;
-	}
 	protected boolean isFollower() {
+		
 		return candidateServer.getState() == ServerState.FOLLOWER;
 	}
 
 	protected void setLastLog(LogEntry lastLog){
+		
 		this.lastLog = lastLog;
 	}
 	
 	protected void setTerm(int term) {
+		
 		this.term = term;
 	}
+	
 	protected int getTerm() {
+		
 		return term;
 	}
 
 	protected void setServerState(ServerState state) {
+		
 		this.candidateServer.setState(state);
-	}
-	protected ServerState getState() {
-		return candidateServer.getState();
 	}
 
 	protected void setVoted(boolean voted) {
+		
 		this.voted = voted;
 	}
+	
 	protected boolean hasVoted() {
+		
 		return voted;
 	}
 }

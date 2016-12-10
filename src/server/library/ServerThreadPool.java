@@ -11,11 +11,13 @@ public class ServerThreadPool {
 
 	private ServerThread[] threadPool;
 
-	public ServerThreadPool(int size) {
+	protected ServerThreadPool(int size) {
+		
 		threadPool = new ServerThread[size];
 	}
 
 	protected void startThreads(List<Server> servers) {
+		
 		int counter = 0;
 		for (Server sv : servers) {
 			ServerThread thread = new ServerThread(sv);
@@ -26,6 +28,7 @@ public class ServerThreadPool {
 	}
 
 	protected void interruptThreads() {
+		
 		for (int i = 0; i < threadPool.length; i++) {
 			if (threadPool[i] != null) {
 				threadPool[i].interrupt();
@@ -36,6 +39,7 @@ public class ServerThreadPool {
 	protected void purgeQueues() {
 
 		for (int i = 0; i < threadPool.length; i++) {
+			
 			if (threadPool[i] != null) {
 				threadPool[i].purgeQueues();
 			}
@@ -45,7 +49,7 @@ public class ServerThreadPool {
 	/**
 	 * Keeps a thread running for a server
 	 */
-	public class ServerThread extends Thread {
+	protected class ServerThread extends Thread {
 
 		private BlockingQueue<Request> requestQueue;
 		private BlockingQueue<Response> responseQueue;
@@ -54,6 +58,7 @@ public class ServerThreadPool {
 		private boolean interrupted;
 
 		public ServerThread(Server server) {
+			
 			this.requestQueue = server.getRequestQueue();
 			this.responseQueue = (BlockingQueue<Response>) server.getResponseQueue();
 			this.voteQueue = server.getVoteQueue();
@@ -70,6 +75,7 @@ public class ServerThreadPool {
 
 		@Override
 		public void run() {
+			
 			Registry registry;
 			RemoteMethods stub;
 			

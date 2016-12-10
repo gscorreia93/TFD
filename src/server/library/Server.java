@@ -13,7 +13,7 @@ public class Server {
 	private Queue<Response> responseQueue;
 	private Queue<Response> voteQueue;
 
-	public Server (String address, int port, int serverID,
+	protected Server (String address, int port, int serverID,
 			BlockingQueue<Request> requestQueue, Queue<Response> responseQueue, Queue<Response> voteQueue) {
 
 		this.address = address;
@@ -25,54 +25,56 @@ public class Server {
 		this.voteQueue = voteQueue;
 	}
 
-	public int getPort() {
+	protected int getPort() {
+		
 		return port;
 	}
 
-	public ServerState getState(){
+	protected ServerState getState(){
+		
 		return state;
 	}
 
-	public String getAddress() {
+	protected String getAddress() {
+		
 		return address;
 	}
-
-	public void setPort(int port) {
-		this.port = port;
-	}
-
-	public void setAddress(String address) {
-		this.address = address;
-	}
-
-	public int getServerID() {
+	
+	protected int getServerID() {
+		
 		return serverID;
 	}
 
-	public BlockingQueue<Request> getRequestQueue() {
+	protected BlockingQueue<Request> getRequestQueue() {
+		
 		return requestQueue;
 	}
 
-	public Queue<Response> getResponseQueue() {
+	protected Queue<Response> getResponseQueue() {
+		
 		return responseQueue;
 	}
 
-	public Queue<Response> getVoteQueue() {
+	protected Queue<Response> getVoteQueue() {
+		
 		return voteQueue;
 	}
 
-	public void setState(ServerState newState){
+	protected void setState(ServerState newState){
+		
 		System.out.println(address + ":" + port + " is now " + newState);
 		this.state = newState;
 	}
 
 	@Override
 	public String toString() {
+		
 		return "serverID: " + serverID + ", " + address + ":" + port;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
+		
 		if (this == obj)
 			return true;
 		if (obj == null)
@@ -86,6 +88,7 @@ public class Server {
 			return false;
 		if (!address.equals(address))
 			return false;
+		
 		return true;
 	}
 }

@@ -14,6 +14,7 @@ public class Entry implements Serializable {
 	private int commitedIndex;
 
 	public Entry(String clientID, String requestID, String entry) {
+		
 		this.entry = entry;
 		this.clientID = clientID;
 		this.requestID = requestID;
@@ -22,50 +23,54 @@ public class Entry implements Serializable {
 		this.commited = false;
 	}
 
-	public Entry(String clientID, String requestID, String entry, int term, boolean commited) {
-		this.entry = entry;
-		this.clientID = clientID;
-		this.requestID = requestID;
-		this.term = term;
-		this.commited = commited;
-	}
-
-	public Entry(int commitedIndex) {
+	protected Entry(int commitedIndex) {
+		
 		this.commitedIndex = commitedIndex;
 	}
 
 	public String getEntry() {
+		
 		return entry;
 	}
 
 	public String getClientID() {
+		
 		return clientID;
 	}
 
 	public String getRequestID() {
+		
 		return requestID;
 	}
 
-	public int getCommitedIndex() {
+	protected int getCommitedIndex() {
+		
 		return commitedIndex;
 	}
 
 	public boolean isCommited() {
+		
 		return commited;
 	}
+	
 	public void setCommited(boolean commited) {
+		
 		this.commited = commited;
 	}
 
 	public int getTerm() {
+		
 		return term;
 	}
+	
 	public void setTerm(int term) {
+		
 		this.term = term;
 	}
 
 	@Override
 	public String toString() {
+		
 		return "clientID: " + clientID
 				+ ", entry: " + entry
 				+ ", requestID: " + requestID
@@ -74,16 +79,19 @@ public class Entry implements Serializable {
 
 	@Override
 	public int hashCode() {
+		
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + ((clientID == null) ? 0 : clientID.hashCode());
 		result = prime * result + ((entry == null) ? 0 : entry.hashCode());
 		result = prime * result + ((requestID == null) ? 0 : requestID.hashCode());
+		
 		return result;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
+		
 		if (this == obj)
 			return true;
 		if (obj == null)

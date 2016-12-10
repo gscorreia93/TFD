@@ -15,36 +15,42 @@ public abstract class Request {
 		this.lastLogTerm = lastLogTerm;
 	}
 
-	public int getTerm() {
+	protected int getTerm() {
+		
 		return term;
 	}
 
-	public int getServerId() {
+	protected int getServerId() {
+		
 		return serverId;
 	}
 
-	public int getLastLogIndex() {
+	protected int getLastLogIndex() {
+		
 		return lastLogIndex;
 	}
 
-	public int getLastLogTerm() {
+	protected int getLastLogTerm() {
+		
 		return lastLogTerm;
 	}
 	
-
 	@Override
 	public int hashCode() {
+		
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + lastLogIndex;
 		result = prime * result + lastLogTerm;
 		result = prime * result + serverId;
 		result = prime * result + term;
+		
 		return result;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
+		
 		if (this == obj)
 			return true;
 		if (obj == null)

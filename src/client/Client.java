@@ -14,7 +14,7 @@ public class Client {
 		ClientLibrary c = new ClientLibrary();
 
 		if (c.connectToServer(clientID)){
-			String entry = null;
+			String entry;
 			Scanner s = new Scanner(System.in);
 
 			help();
@@ -23,8 +23,9 @@ public class Client {
 				System.out.print("Command: ");
 				entry = s.nextLine();
 
-				if (entry == null || entry.equalsIgnoreCase("q"))
+				if (entry == null || entry.equalsIgnoreCase("q")){
 					break;
+				}
 
 				if (entry.equalsIgnoreCase("h")) {
 					help();
@@ -70,6 +71,7 @@ public class Client {
 	}
 
 	private static void help() {
+		
 		System.out.println("");
 		System.out.println("Available commands \t (q to quit, h for help):");
 		System.out.println("list \t\t\t Lists the available contents");

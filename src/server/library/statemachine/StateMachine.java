@@ -8,15 +8,18 @@ public class StateMachine implements IService {
 	List<Operation> operations;
 
 	public StateMachine() {
+		
 		operations = new ArrayList<>();
 	}
 
 	@Override
 	public String execute(String op) {
+		
 		return produceResult(op);
 	}
 
 	private String produceResult(String entry) {
+		
 		entry = entry.trim().replaceAll(" +", " ");
 
 		if (entry.equalsIgnoreCase("list")) {
@@ -47,6 +50,7 @@ public class StateMachine implements IService {
 	}
 
 	private StringBuilder list() {
+		
 		StringBuilder contents = new StringBuilder();
 
 		if (!operations.isEmpty()) {
@@ -58,16 +62,20 @@ public class StateMachine implements IService {
 		} else {
 			contents.append("No contents to list.");
 		}
+		
 		return contents;
 	}
 
 	private String put(String op) {
+		
 		Operation operation = new Operation(op);
 		operations.add(operation);
+		
 		return "'" + op + "' successfully inserted!";
 	}
 
 	private String get(String arg) {
+		
 		int index = -1;
 		try {
 			index = Integer.parseInt(arg);
@@ -92,6 +100,7 @@ public class StateMachine implements IService {
 	}
 
 	private String del(String arg) {
+		
 		int index = -1;
 		try {
 			index = Integer.parseInt(arg);
@@ -120,10 +129,12 @@ public class StateMachine implements IService {
 		for (int i = 0; i < operations.size(); i++) {
 			operations.get(i).setIndex(i);
 		}
+		
 		return "'" + result + "' successfully deleted!";
 	}
 
 	private String cas(String pos, String arg1, String arg2) {
+		
 		int index = -1;
 		try {
 			index = Integer.parseInt(pos);
@@ -144,30 +155,39 @@ public class StateMachine implements IService {
 				return "'" + index + ": " + result + "' is different than " + arg1;
 			}
 		}
+		
 		return "'" + arg1 + "' was't found at " + pos;
 	}
 
 	private class Operation {
-		int index;
-		String op;
+		
+		private int index;
+		private String op;
 
-		Operation(String s) {
+		private Operation(String s) {
+			
 			index = operations.size();
 			op = s;
 		}
 
-		String getOp() {
+		private String getOp() {
+			
 			return op;
 		}
-		void setOp(String op) {
+		
+		private void setOp(String op) {
+			
 			this.op = op;
 		}
 
-		void setIndex(int i) {
+		private void setIndex(int i) {
+			
 			this.index= i;
 		}
 
+		@Override
 		public String toString() {
+			
 			return index + ": " + op;
 		}
 	}

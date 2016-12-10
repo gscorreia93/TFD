@@ -2,5 +2,5 @@ package server.library.statemachine;
 
 public interface IService {
 
-	String execute(String op);
+	public String execute(String op);
 }
